@@ -57,7 +57,20 @@ function RouteComponent() {
     try {
       // Read file content
       const content = await file.text();
-      let data: any;
+      let data: {
+        platform?: string;
+        bookmarks?: Array<{
+          postId?: string;
+          postUrl?: string;
+          content?: string;
+          author?: {
+            name?: string;
+            username?: string;
+            profileUrl?: string;
+          };
+          timestamp?: string;
+        }>;
+      };
 
       try {
         data = JSON.parse(content);
@@ -85,13 +98,13 @@ function RouteComponent() {
       for (let i = 0; i < sampleSize; i++) {
         const bookmark = data.bookmarks[i];
         if (
-          !bookmark.postId ||
-          !bookmark.postUrl ||
-          !bookmark.content ||
-          !bookmark.author?.name ||
-          !bookmark.author?.username ||
-          !bookmark.author?.profileUrl ||
-          !bookmark.timestamp
+          !bookmark?.postId ||
+          !bookmark?.postUrl ||
+          !bookmark?.content ||
+          !bookmark?.author?.name ||
+          !bookmark?.author?.username ||
+          !bookmark?.author?.profileUrl ||
+          !bookmark?.timestamp
         ) {
           throw new Error(
             `Invalid bookmark at index ${i}. Missing required fields.`
@@ -100,15 +113,16 @@ function RouteComponent() {
       }
 
       // Create preview
-      const sampleBookmarks = data.bookmarks.slice(0, 3).map((b: any) => ({
-        postId: b.postId,
+      const sampleBookmarks = data.bookmarks.slice(0, 3).map((b) => ({
+        postId: b.postId || "",
         content:
-          b.content.substring(0, 100) + (b.content.length > 100 ? "..." : ""),
-        author: `${b.author.name} (@${b.author.username})`,
+          (b.content || "").substring(0, 100) +
+          ((b.content || "").length > 100 ? "..." : ""),
+        author: `${b.author?.name || ""} (@${b.author?.username || ""})`,
       }));
 
       setPreview({
-        platform: data.platform,
+        platform: data.platform as Platform,
         bookmarkCount: data.bookmarks.length,
         sampleBookmarks,
       });

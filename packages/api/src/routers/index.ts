@@ -5,6 +5,8 @@ import { collectionsRouter } from "./collections";
 import { categoriesRouter } from "./categories";
 import { dashboardRouter } from "./dashboard";
 import { userRouter } from "./user";
+import { featureFlagsRouter } from "./feature-flags";
+import { monitoringRouter } from "./monitoring";
 
 export const appRouter = {
   healthCheck: publicProcedure.handler(() => {
@@ -21,6 +23,8 @@ export const appRouter = {
   categories: categoriesRouter,
   dashboard: dashboardRouter,
   user: userRouter,
+  featureFlags: featureFlagsRouter,
+  monitoring: monitoringRouter,
 };
 export type AppRouter = typeof appRouter;
 export type AppRouterClient = RouterClient<typeof appRouter>;

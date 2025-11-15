@@ -19,6 +19,7 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { useState } from "react";
 import { toast } from "sonner";
+import { EnrichmentSettings } from "@/components/enrichment-settings";
 
 export const Route = createFileRoute("/settings")({
   component: RouteComponent,
@@ -224,6 +225,9 @@ function RouteComponent() {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Enrichment Settings */}
+        <EnrichmentSettings />
 
         {/* Account Management */}
         <Card>

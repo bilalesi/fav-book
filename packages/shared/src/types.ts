@@ -1,6 +1,13 @@
 // Enums
 export type Platform = "TWITTER" | "LINKEDIN" | "GENERIC_URL";
 export type MediaType = "IMAGE" | "VIDEO" | "LINK";
+export type ProcessingStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "COMPLETED"
+  | "PARTIAL_SUCCESS"
+  | "FAILED";
+export type DownloadStatus = "PENDING" | "DOWNLOADING" | "COMPLETED" | "FAILED";
 
 // Core entities
 export interface BookmarkPost {
@@ -20,6 +27,42 @@ export interface BookmarkPost {
   media?: Media[];
   collections?: Collection[];
   categories?: Category[];
+  enrichment?: BookmarkEnrichment;
+  downloadedMedia?: DownloadedMedia[];
+}
+
+export interface BookmarkEnrichment {
+  id: string;
+  bookmarkPostId: string;
+  summary?: string;
+  keywords?: string[];
+  tags?: string[];
+  processingStatus: ProcessingStatus;
+  workflowId?: string;
+  errorMessage?: string;
+  enrichedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface DownloadedMedia {
+  id: string;
+  bookmarkPostId: string;
+  type: MediaType;
+  originalUrl: string;
+  storagePath: string;
+  storageUrl?: string;
+  fileSize: bigint;
+  duration?: number;
+  quality?: string;
+  format?: string;
+  width?: number;
+  height?: number;
+  downloadStatus: DownloadStatus;
+  errorMessage?: string;
+  downloadedAt?: Date;
+  createdAt: Date;
+  metadata?: Record<string, any>;
 }
 
 export interface Media {

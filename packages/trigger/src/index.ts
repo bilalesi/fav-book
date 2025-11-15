@@ -28,3 +28,8 @@ export {
   isRetryableError,
   classifyError,
 } from "./types";
+
+// Export monitoring and metrics
+export * from "./lib/metrics";
+export * from "./lib/metrics-tracker";
+export * from "./lib/alerting";

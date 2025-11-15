@@ -5,6 +5,7 @@ import { Eye } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { queryClient, client } from "@/utils/orpc";
 import type { ReactNode } from "react";
+import { BookmarkStatusBadge } from "./bookmark-status-badge";
 
 interface BookmarkCardBaseProps {
   bookmark: BookmarkPost;
@@ -47,8 +48,13 @@ export function BookmarkCardBase({
       <CardHeader className="space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
               {platformBadge}
+              {bookmark.enrichment && (
+                <BookmarkStatusBadge
+                  status={bookmark.enrichment.processingStatus}
+                />
+              )}
               <div
                 className="flex items-center gap-1 text-xs text-muted-foreground"
                 aria-label={`Viewed ${bookmark.viewCount} times`}
@@ -64,6 +70,36 @@ export function BookmarkCardBase({
       </CardHeader>
       <CardContent className="space-y-3">
         {mainContent}
+
+        {/* Enrichment Preview */}
+        {bookmark.enrichment?.processingStatus === "COMPLETED" &&
+          bookmark.enrichment.summary && (
+            <div className="border-t pt-3 space-y-2">
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                <span className="font-medium">AI Summary:</span>{" "}
+                {bookmark.enrichment.summary}
+              </p>
+              {bookmark.enrichment.keywords &&
+                bookmark.enrichment.keywords.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {bookmark.enrichment.keywords.slice(0, 3).map((keyword) => (
+                      <Badge
+                        key={keyword}
+                        variant="secondary"
+                        className="text-xs"
+                      >
+                        {keyword}
+                      </Badge>
+                    ))}
+                    {bookmark.enrichment.keywords.length > 3 && (
+                      <Badge variant="secondary" className="text-xs">
+                        +{bookmark.enrichment.keywords.length - 3}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+            </div>
+          )}
 
         {/* Categories */}
         {bookmark.categories && bookmark.categories.length > 0 && (

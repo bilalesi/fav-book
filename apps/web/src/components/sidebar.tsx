@@ -1,12 +1,20 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
-import { Home, Bookmark, FolderOpen, Upload, Settings } from "lucide-react";
+import {
+  Home,
+  Bookmark,
+  FolderOpen,
+  Upload,
+  Settings,
+  Activity,
+} from "lucide-react";
 
 const navigation = [
   { name: "Overview", href: "/dashboard", icon: Home },
   { name: "Bookmarks", href: "/bookmarks", icon: Bookmark },
   { name: "Collections", href: "/collections", icon: FolderOpen },
   { name: "Import", href: "/import", icon: Upload },
+  { name: "Monitoring", href: "/monitoring", icon: Activity },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

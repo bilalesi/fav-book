@@ -8,6 +8,14 @@ import { EditBookmarkDialog } from "@/components/edit-bookmark-dialog";
 import { DeleteBookmarkDialog } from "@/components/delete-bookmark-dialog";
 import { ManageCollectionsDialog } from "@/components/manage-collections-dialog";
 import { ManageCategoriesDialog } from "@/components/manage-categories-dialog";
+import { BookmarkStatusBadge } from "@/components/bookmark-status-badge";
+import { BookmarkSummary } from "@/components/bookmark-summary";
+import { DownloadedMediaPlayer } from "@/components/downloaded-media-player";
+import { RetryEnrichmentButton } from "@/components/retry-enrichment-button";
+import { EnrichmentErrorDetails } from "@/components/enrichment-error-details";
+import { useBookmarkStatus } from "@/hooks/use-bookmark-status";
+import { useQuery } from "@tanstack/react-query";
+import { client } from "@/utils/orpc";
 import { useState } from "react";
 import {
   Edit2Icon,
@@ -32,6 +40,29 @@ function BookmarkDetailPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [collectionsDialogOpen, setCollectionsDialogOpen] = useState(false);
   const [categoriesDialogOpen, setCategoriesDialogOpen] = useState(false);
+
+  // Poll for enrichment status if bookmark is being processed
+  const { status: enrichmentStatus } = useBookmarkStatus({
+    bookmarkId: id,
+    initialStatus: bookmark?.enrichment?.processingStatus,
+    enabled: !!bookmark,
+  });
+
+  // Fetch detailed enrichment status with error information
+  const { data: enrichmentDetails } = useQuery({
+    queryKey: ["bookmarks", "enrichment-status", id],
+    queryFn: async () => {
+      return await client.bookmarks.getEnrichmentStatus({ id });
+    },
+    enabled: !!bookmark && !!bookmark.enrichment,
+    refetchInterval: (data) => {
+      // Poll every 10 seconds if processing
+      if (data?.processingStatus === "PROCESSING") {
+        return 10000;
+      }
+      return false;
+    },
+  });
 
   if (isLoading) {
     return (
@@ -130,11 +161,14 @@ function BookmarkDetailPage() {
         <CardHeader>
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
                 {platformIcon}
                 <Badge variant="secondary">
                   {bookmark.platform === "TWITTER" ? "X (Twitter)" : "LinkedIn"}
                 </Badge>
+                {bookmark.enrichment && (
+                  <BookmarkStatusBadge status={enrichmentStatus} />
+                )}
               </div>
               <CardTitle className="text-2xl mb-2">
                 {bookmark.authorName}
@@ -160,6 +194,48 @@ function BookmarkDetailPage() {
               {bookmark.content}
             </p>
           </div>
+
+          {/* AI Summary Section */}
+          {bookmark.enrichment && (
+            <div className="space-y-4">
+              {enrichmentStatus === "COMPLETED" && (
+                <BookmarkSummary
+                  summary={bookmark.enrichment.summary}
+                  keywords={bookmark.enrichment.keywords}
+                  tags={bookmark.enrichment.tags}
+                />
+              )}
+
+              {(enrichmentStatus === "FAILED" ||
+                enrichmentStatus === "PARTIAL_SUCCESS") &&
+                enrichmentDetails?.hasErrors && (
+                  <EnrichmentErrorDetails
+                    errors={enrichmentDetails.errors || []}
+                    bookmarkId={bookmark.id}
+                    processingStatus={enrichmentStatus}
+                  />
+                )}
+
+              {enrichmentStatus === "PARTIAL_SUCCESS" &&
+                bookmark.enrichment.summary && (
+                  <BookmarkSummary
+                    summary={bookmark.enrichment.summary}
+                    keywords={bookmark.enrichment.keywords}
+                    tags={bookmark.enrichment.tags}
+                  />
+                )}
+            </div>
+          )}
+
+          {/* Downloaded Media Section */}
+          {bookmark.downloadedMedia && bookmark.downloadedMedia.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium">Downloaded Media</h3>
+              {bookmark.downloadedMedia.map((media) => (
+                <DownloadedMediaPlayer key={media.id} media={media} />
+              ))}
+            </div>
+          )}
 
           {/* Media gallery */}
           {imageMedia.length > 0 && (

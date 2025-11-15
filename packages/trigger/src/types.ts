@@ -38,11 +38,11 @@ export interface MediaMetadata {
   /** Type of media (video or audio) */
   type: "video" | "audio";
   /** Original URL of the media */
-  originalUrl: string;
+  originalUrl?: string;
   /** Storage path/key in S3 */
-  storagePath: string;
+  storagePath?: string;
   /** Accessible URL for the media (presigned or public) */
-  storageUrl: string;
+  storageUrl?: string;
   /** File size in bytes */
   fileSize: number;
   /** Duration in seconds (for video/audio) */
@@ -55,6 +55,76 @@ export interface MediaMetadata {
   width?: number;
   /** Video height in pixels */
   height?: number;
+  /** Thumbnail URL */
+  thumbnailUrl?: string;
+}
+
+/**
+ * Processing status for bookmarks
+ */
+export type ProcessingStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "COMPLETED"
+  | "FAILED"
+  | "PARTIAL_SUCCESS";
+
+/**
+ * Media detection result
+ */
+export interface MediaDetectionResult {
+  /** Whether media was detected */
+  hasMedia: boolean;
+  /** Type of media if detected */
+  mediaType?: "video" | "audio";
+  /** Estimated file size in bytes */
+  estimatedSize?: number;
+  /** Quality information */
+  quality?: string;
+  /** Available quality options */
+  availableQualities?: string[];
+}
+
+/**
+ * Download result from media downloader
+ */
+export interface DownloadResult {
+  /** Whether download was successful */
+  success: boolean;
+  /** Path to downloaded file */
+  filePath?: string;
+  /** Media metadata */
+  metadata: MediaMetadata;
+  /** Error message if failed */
+  error?: string;
+}
+
+/**
+ * Upload result from storage service
+ */
+export interface UploadResult {
+  /** Storage key/path */
+  key: string;
+  /** Accessible URL */
+  url: string;
+  /** File size in bytes */
+  size: number;
+  /** ETag from S3 */
+  etag: string;
+}
+
+/**
+ * Summary result from AI service
+ */
+export interface SummaryResult {
+  /** Generated summary text */
+  summary: string;
+  /** Extracted keywords */
+  keywords: string[];
+  /** Extracted tags */
+  tags: string[];
+  /** Number of tokens used */
+  tokensUsed: number;
 }
 
 /**
@@ -153,6 +223,7 @@ export enum ErrorType {
 
 /**
  * Determines if an error is retryable based on its type
+ * @deprecated Use isRetryableError from lib/errors instead
  */
 export function isRetryableError(error: Error | ErrorType): boolean {
   const retryableTypes = [
@@ -178,6 +249,7 @@ export function isRetryableError(error: Error | ErrorType): boolean {
 
 /**
  * Classifies an error into an ErrorType
+ * @deprecated Use classifyError from lib/errors instead
  */
 export function classifyError(error: Error): ErrorType {
   const message = error.message.toLowerCase();

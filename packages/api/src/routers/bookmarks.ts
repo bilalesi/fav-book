@@ -7,6 +7,8 @@ import type {
 } from "@my-better-t-app/shared";
 import { validateAndNormalizeUrl } from "../lib/url-normalizer";
 import { extractMetadata } from "../lib/metadata-extractor";
+import { tasks } from "@trigger.dev/sdk/v3";
+import type { BookmarkEnrichmentInput } from "@my-better-t-app/trigger";
 
 // Validation schemas
 const platformSchema = z.enum(["TWITTER", "LINKEDIN", "GENERIC_URL"]);
@@ -89,8 +91,83 @@ const bulkImportSchema = z.object({
   bookmarks: z.array(bookmarkImportDataSchema),
 });
 
+// Helper function to check if enrichment is enabled
+function isEnrichmentEnabled(): boolean {
+  return (
+    process.env.ENABLE_AI_SUMMARIZATION === "true" ||
+    process.env.ENABLE_MEDIA_DOWNLOAD === "true"
+  );
+}
+
+// Helper function to check if media download is enabled
+function isMediaDownloadEnabled(): boolean {
+  return process.env.ENABLE_MEDIA_DOWNLOAD === "true";
+}
+
+// Helper function to spawn enrichment workflow
+async function spawnEnrichmentWorkflow(
+  bookmarkId: string,
+  userId: string,
+  platform: string,
+  url: string,
+  content: string
+): Promise<string | null> {
+  try {
+    // Check if enrichment is enabled via feature flags
+    if (!isEnrichmentEnabled()) {
+      console.log(
+        `[Enrichment] Skipped for bookmark ${bookmarkId} - enrichment disabled`
+      );
+      return null;
+    }
+
+    const payload: BookmarkEnrichmentInput = {
+      bookmarkId,
+      userId,
+      platform: platform as "TWITTER" | "LINKEDIN" | "GENERIC_URL",
+      url,
+      content,
+      enableMediaDownload: isMediaDownloadEnabled(),
+    };
+
+    // Trigger the workflow
+    const handle = await tasks.trigger("bookmark-enrichment", payload);
+
+    console.log(`[Enrichment] Workflow spawned for bookmark ${bookmarkId}`, {
+      workflowId: handle.id,
+      enableMediaDownload: payload.enableMediaDownload,
+    });
+
+    return handle.id;
+  } catch (error) {
+    console.error(
+      `[Enrichment] Failed to spawn workflow for bookmark ${bookmarkId}:`,
+      error
+    );
+    // Don't throw - enrichment failure shouldn't block bookmark creation
+    return null;
+  }
+}
+
+// Type for bookmark with all includes
+type BookmarkWithIncludes = Prisma.BookmarkPostGetPayload<{
+  include: {
+    media: true;
+    collections: {
+      include: {
+        collection: true;
+      };
+    };
+    categories: {
+      include: {
+        category: true;
+      };
+    };
+  };
+}>;
+
 // Helper function to transform Prisma result to BookmarkPost
-function transformBookmarkPost(bookmark: any): BookmarkPost {
+function transformBookmarkPost(bookmark: BookmarkWithIncludes): BookmarkPost {
   return {
     id: bookmark.id,
     userId: bookmark.userId,
@@ -104,27 +181,27 @@ function transformBookmarkPost(bookmark: any): BookmarkPost {
     savedAt: bookmark.savedAt,
     createdAt: bookmark.createdAt,
     viewCount: bookmark.viewCount,
-    metadata: bookmark.metadata as Record<string, any> | undefined,
-    media: bookmark.media?.map((m: any) => ({
+    metadata: bookmark.metadata as Record<string, unknown> | undefined,
+    media: bookmark.media?.map((m) => ({
       id: m.id,
       bookmarkPostId: m.bookmarkPostId,
       type: m.type,
       url: m.url,
-      thumbnailUrl: m.thumbnailUrl,
-      metadata: m.metadata as Record<string, any> | undefined,
+      thumbnailUrl: m.thumbnailUrl ?? undefined,
+      metadata: m.metadata as Record<string, unknown> | undefined,
     })),
-    collections: bookmark.collections?.map((bc: any) => ({
+    collections: bookmark.collections?.map((bc) => ({
       id: bc.collection.id,
       userId: bc.collection.userId,
       name: bc.collection.name,
-      description: bc.collection.description,
+      description: bc.collection.description ?? undefined,
       createdAt: bc.collection.createdAt,
       updatedAt: bc.collection.updatedAt,
     })),
-    categories: bookmark.categories?.map((bc: any) => ({
+    categories: bookmark.categories?.map((bc) => ({
       id: bc.category.id,
       name: bc.category.name,
-      userId: bc.category.userId,
+      userId: bc.category.userId ?? undefined,
       isSystem: bc.category.isSystem,
       createdAt: bc.category.createdAt,
     })),
@@ -191,6 +268,26 @@ export const bookmarksRouter = {
           },
         },
       });
+
+      // Spawn enrichment workflow asynchronously
+      const workflowId = await spawnEnrichmentWorkflow(
+        bookmark.id,
+        userId,
+        input.platform,
+        input.postUrl,
+        input.content
+      );
+
+      // Create enrichment record if workflow was spawned
+      if (workflowId) {
+        await prisma.bookmarkEnrichment.create({
+          data: {
+            bookmarkPostId: bookmark.id,
+            processingStatus: "PENDING",
+            workflowId,
+          },
+        });
+      }
 
       return transformBookmarkPost(bookmark);
     }),
@@ -644,7 +741,7 @@ export const bookmarksRouter = {
       `;
 
       // Build parameters array
-      const params: any[] = [searchTerms, userId];
+      const params: (string | Date | number)[] = [searchTerms, userId];
       if (filters.platform) params.push(filters.platform);
       if (filters.authorUsername) params.push(filters.authorUsername);
       if (filters.dateFrom) params.push(filters.dateFrom);
@@ -807,6 +904,7 @@ export const bookmarksRouter = {
       let successCount = 0;
       let failureCount = 0;
       const errors: Array<{ index: number; error: string }> = [];
+      const createdBookmarkIds: string[] = [];
 
       // Process bookmarks in a transaction
       await prisma.$transaction(async (tx) => {
@@ -848,7 +946,7 @@ export const bookmarksRouter = {
             }
 
             // Create bookmark
-            await tx.bookmarkPost.create({
+            const created = await tx.bookmarkPost.create({
               data: {
                 userId,
                 platform,
@@ -873,6 +971,7 @@ export const bookmarksRouter = {
               },
             });
 
+            createdBookmarkIds.push(created.id);
             successCount++;
           } catch (error) {
             failureCount++;
@@ -883,6 +982,55 @@ export const bookmarksRouter = {
           }
         }
       });
+
+      // Spawn enrichment workflows for all successfully created bookmarks
+      // Do this outside the transaction to avoid blocking
+      if (createdBookmarkIds.length > 0) {
+        console.log(
+          `[Bulk Import] Spawning enrichment workflows for ${createdBookmarkIds.length} bookmarks`
+        );
+
+        // Spawn workflows in parallel but don't wait for them
+        Promise.all(
+          createdBookmarkIds.map(async (bookmarkId, index) => {
+            const bookmark = bookmarks.find(
+              (_, i) =>
+                !errors.some((e) => e.index === i) &&
+                createdBookmarkIds.indexOf(bookmarkId) === index
+            );
+
+            if (!bookmark) return;
+
+            const workflowId = await spawnEnrichmentWorkflow(
+              bookmarkId,
+              userId,
+              platform,
+              bookmark.postUrl,
+              bookmark.content
+            );
+
+            // Create enrichment record if workflow was spawned
+            if (workflowId) {
+              await prisma.bookmarkEnrichment
+                .create({
+                  data: {
+                    bookmarkPostId: bookmarkId,
+                    processingStatus: "PENDING",
+                    workflowId,
+                  },
+                })
+                .catch((err) => {
+                  console.error(
+                    `[Bulk Import] Failed to create enrichment record for ${bookmarkId}:`,
+                    err
+                  );
+                });
+            }
+          })
+        ).catch((err) => {
+          console.error("[Bulk Import] Error spawning workflows:", err);
+        });
+      }
 
       return {
         successCount,
@@ -1048,6 +1196,26 @@ export const bookmarksRouter = {
             },
           },
         });
+
+        // Spawn enrichment workflow asynchronously
+        const workflowId = await spawnEnrichmentWorkflow(
+          bookmark.id,
+          userId,
+          "GENERIC_URL",
+          normalizedUrl,
+          description || ""
+        );
+
+        // Create enrichment record if workflow was spawned
+        if (workflowId) {
+          await prisma.bookmarkEnrichment.create({
+            data: {
+              bookmarkPostId: bookmark.id,
+              processingStatus: "PENDING",
+              workflowId,
+            },
+          });
+        }
 
         const result = transformBookmarkPost(bookmark);
 
@@ -1235,6 +1403,137 @@ export const bookmarksRouter = {
         success: true,
         bookmarkCount: bookmarks.length,
         collectionCount: collections.length,
+      };
+    }),
+
+  // Get enrichment status for a bookmark
+  getEnrichmentStatus: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .handler(async ({ input, context }) => {
+      const userId = context.session.user.id;
+
+      // Verify bookmark ownership
+      const bookmark = await prisma.bookmarkPost.findFirst({
+        where: {
+          id: input.id,
+          userId,
+        },
+        include: {
+          enrichment: true,
+          downloadedMedia: {
+            select: {
+              id: true,
+              type: true,
+              downloadStatus: true,
+              storageUrl: true,
+              fileSize: true,
+              duration: true,
+              quality: true,
+              format: true,
+              errorMessage: true,
+            },
+          },
+        },
+      });
+
+      if (!bookmark) {
+        throw new Error("Bookmark not found");
+      }
+
+      // Return enrichment status
+      return {
+        bookmarkId: bookmark.id,
+        processingStatus: bookmark.enrichment?.processingStatus || "PENDING",
+        workflowId: bookmark.enrichment?.workflowId,
+        summary: bookmark.enrichment?.summary,
+        keywords: bookmark.enrichment?.keywords as string[] | undefined,
+        tags: bookmark.enrichment?.tags as string[] | undefined,
+        enrichedAt: bookmark.enrichment?.enrichedAt,
+        errorMessage: bookmark.enrichment?.errorMessage,
+        downloadedMedia: bookmark.downloadedMedia.map((media) => ({
+          id: media.id,
+          type: media.type,
+          downloadStatus: media.downloadStatus,
+          storageUrl: media.storageUrl,
+          fileSize: media.fileSize.toString(),
+          duration: media.duration,
+          quality: media.quality,
+          format: media.format,
+          errorMessage: media.errorMessage,
+        })),
+      };
+    }),
+
+  // Retry enrichment for a failed bookmark
+  retryEnrichment: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .handler(async ({ input, context }) => {
+      const userId = context.session.user.id;
+
+      // Verify bookmark ownership and get bookmark data
+      const bookmark = await prisma.bookmarkPost.findFirst({
+        where: {
+          id: input.id,
+          userId,
+        },
+        include: {
+          enrichment: true,
+        },
+      });
+
+      if (!bookmark) {
+        throw new Error("Bookmark not found");
+      }
+
+      // Check if enrichment exists and is in a retryable state
+      if (bookmark.enrichment) {
+        const status = bookmark.enrichment.processingStatus;
+        if (status === "PROCESSING" || status === "PENDING") {
+          throw new Error(
+            "Enrichment is already in progress. Please wait for it to complete."
+          );
+        }
+      }
+
+      // Spawn new enrichment workflow
+      const workflowId = await spawnEnrichmentWorkflow(
+        bookmark.id,
+        userId,
+        bookmark.platform,
+        bookmark.postUrl,
+        bookmark.content
+      );
+
+      if (!workflowId) {
+        throw new Error(
+          "Failed to start enrichment workflow. Enrichment may be disabled."
+        );
+      }
+
+      // Update or create enrichment record
+      if (bookmark.enrichment) {
+        await prisma.bookmarkEnrichment.update({
+          where: { id: bookmark.enrichment.id },
+          data: {
+            processingStatus: "PENDING",
+            workflowId,
+            errorMessage: null,
+          },
+        });
+      } else {
+        await prisma.bookmarkEnrichment.create({
+          data: {
+            bookmarkPostId: bookmark.id,
+            processingStatus: "PENDING",
+            workflowId,
+          },
+        });
+      }
+
+      return {
+        success: true,
+        workflowId,
+        message: "Enrichment retry started successfully",
       };
     }),
 

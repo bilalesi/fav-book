@@ -1,0 +1,67 @@
+enum ErrorType {
+    NETWORK_ERROR
+    TIMEOUT
+    SERVICE_UNAVAILABLE
+    RATE_LIMIT
+    INVALID_CONTENT
+    AUTHENTICATION_FAILED
+    NOT_FOUND
+    MALFORMED_URL
+    QUOTA_EXCEEDED
+    UNKNOWN
+}
+
+enum WorkflowStep {
+    CONTENT_RETRIEVAL
+    SUMMARIZATION
+    MEDIA_DETECTION
+    MEDIA_DOWNLOAD
+    STORAGE_UPLOAD
+    DATABASE_UPDATE
+}
+
+model WorkflowErrorLog {
+    id             String       @id @default(cuid())
+    bookmarkPostId String
+    workflowId     String?
+    step           WorkflowStep
+    errorType      ErrorType
+    errorMessage   String       @db.Text
+    stackTrace     String?      @db.Text
+    retryable      Boolean
+    retryCount     Int          @default(0)
+    resolved       Boolean      @default(false)
+    context        Json?
+    occurredAt     DateTime     @default(now())
+    resolvedAt     DateTime?
+
+    @@index([bookmarkPostId])
+    @@index([workflowId])
+    @@index([step])
+    @@index([errorType])
+    @@index([resolved])
+    @@index([occurredAt])
+    @@map("workflow_error_log")
+}
+
+model WorkflowMetrics {
+    id                String   @id @default(cuid())
+    bookmarkPostId    String
+    workflowId        String?
+    step              String
+    operation         String
+    durationMs        Int
+    memoryUsedBytes   BigInt?
+    tokensUsed        Int?
+    success           Boolean
+    errorType         String?
+    metadata          Json?
+    recordedAt        DateTime @default(now())
+
+    @@index([bookmarkPostId])
+    @@index([workflowId])
+    @@index([step])
+    @@index([operation])
+    @@index([recordedAt])
+    @@map("workflow_metrics")
+}

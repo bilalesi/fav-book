@@ -30,6 +30,8 @@
     "zod": "catalog:",
     "@my-better-t-app/auth": "workspace:*",
     "@my-better-t-app/db": "workspace:*",
-    "@my-better-t-app/shared": "workspace:*"
+    "@my-better-t-app/shared": "workspace:*",
+    "@my-better-t-app/trigger": "workspace:*",
+    "@trigger.dev/sdk": "4.1.0"
   }
 }

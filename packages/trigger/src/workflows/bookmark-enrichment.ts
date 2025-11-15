@@ -1,10 +1,17 @@
-import { task, logger } from "@trigger.dev/sdk/v3";
+import { task } from "@trigger.dev/sdk/v3";
 import type {
   BookmarkEnrichmentInput,
   BookmarkEnrichmentOutput,
   WorkflowStep,
 } from "../types";
-import { isRetryableError, classifyError } from "../types";
+import { isRetryableError } from "../types";
+import { getFeatureFlag } from "@my-better-t-app/shared";
+import {
+  createLogger,
+  createWorkflowLogContext,
+  PerformanceTimer,
+} from "../lib/logger";
+import { createWorkflowError } from "../lib/errors";
 
 /**
  * Main bookmark enrichment workflow
@@ -18,23 +25,26 @@ import { isRetryableError, classifyError } from "../types";
 export const bookmarkEnrichmentWorkflow = task({
   id: "bookmark-enrichment",
   retry: {
-    maxAttempts: 3,
+    maxAttempts: getFeatureFlag("WORKFLOW_RETRY_ATTEMPTS"),
     factor: 3,
-    minTimeoutInMs: 5000,
-    maxTimeoutInMs: 45000,
+    minTimeoutInMs: getFeatureFlag("WORKFLOW_RETRY_DELAY_MS"),
+    maxTimeoutInMs: getFeatureFlag("WORKFLOW_RETRY_DELAY_MS") * 9, // 3^2 factor
     randomize: true,
   },
-  run: async (payload: BookmarkEnrichmentInput) => {
-    const startTime = Date.now();
+  run: async (payload: BookmarkEnrichmentInput, { ctx }) => {
     const { bookmarkId, userId, platform, url, content, enableMediaDownload } =
       payload;
 
-    logger.info("Starting bookmark enrichment workflow", {
-      bookmarkId,
-      userId,
+    // Create structured logger with correlation IDs
+    const logContext = createWorkflowLogContext(bookmarkId, userId, ctx.run.id);
+    const logger = createLogger(logContext);
+    const workflowTimer = new PerformanceTimer();
+
+    const startTime = logger.workflowStart({
       platform,
       url,
       enableMediaDownload,
+      contentLength: content.length,
     });
 
     const result: BookmarkEnrichmentOutput = {
@@ -44,135 +54,293 @@ export const bookmarkEnrichmentWorkflow = task({
 
     try {
       // Step 1: Content Retrieval
-      logger.info("Step 1: Content retrieval", { bookmarkId });
+      const contentRetrievalTimer = new PerformanceTimer();
+      const stepStartTime = logger.stepStart(
+        "content_retrieval" as WorkflowStep
+      );
       let fullContent = content;
 
       try {
         // Import content retrieval task dynamically to avoid circular dependencies
         const { retrieveContent } = await import("../tasks/content-retrieval");
         fullContent = await retrieveContent(url, platform, content);
-        logger.info("Content retrieved successfully", {
-          bookmarkId,
-          contentLength: fullContent.length,
-        });
+
+        logger.stepComplete(
+          "content_retrieval" as WorkflowStep,
+          stepStartTime,
+          {
+            contentLength: fullContent.length,
+            originalLength: content.length,
+          }
+        );
+
+        contentRetrievalTimer.logMetrics(logger, "content_retrieval");
       } catch (error) {
         const err = error as Error;
-        logger.warn("Content retrieval failed, using original content", {
-          bookmarkId,
-          error: err.message,
-        });
+        logger.stepFailed(
+          "content_retrieval" as WorkflowStep,
+          stepStartTime,
+          err,
+          {
+            originalContentLength: content.length,
+          }
+        );
+
         // Non-critical error, continue with original content
         result.errors?.push({
           step: "content_retrieval" as WorkflowStep,
           message: err.message,
           timestamp: new Date(),
           retryable: false,
+          stackTrace: err.stack,
         });
       }
 
       // Step 2: AI Summarization
-      logger.info("Step 2: AI summarization", { bookmarkId });
-      try {
-        // Placeholder for AI summarization - will be implemented in task 4
-        // For now, we'll structure the workflow to call it when available
-        logger.info("Summarization step placeholder", { bookmarkId });
+      const aiSummarizationEnabled = getFeatureFlag("ENABLE_AI_SUMMARIZATION");
 
-        // TODO: Implement when AI package is ready
-        // const { generateSummary } = await import("@my-better-t-app/ai");
-        // const summaryResult = await generateSummary(fullContent);
-        // result.summary = summaryResult.summary;
-        // result.keywords = summaryResult.keywords;
-        // result.tags = summaryResult.tags;
-        // result.tokensUsed = summaryResult.tokensUsed;
+      if (aiSummarizationEnabled) {
+        const summarizationTimer = new PerformanceTimer();
+        const stepStartTime = logger.stepStart(
+          "summarization" as WorkflowStep,
+          {
+            contentLength: fullContent.length,
+          }
+        );
 
-        logger.info("Summarization completed (placeholder)", {
-          bookmarkId,
-        });
-      } catch (error) {
-        const err = error as Error;
-        logger.error("Summarization failed", {
-          bookmarkId,
-          error: err.message,
-          errorType: classifyError(err),
-        });
+        try {
+          const { summarizeContent, updateBookmarkSummary } = await import(
+            "../tasks/summarization"
+          );
 
-        result.errors?.push({
-          step: "summarization" as WorkflowStep,
-          message: err.message,
-          timestamp: new Date(),
-          retryable: isRetryableError(err),
-          stackTrace: err.stack,
-        });
+          // Generate summary, keywords, and tags
+          const summaryResult = await summarizeContent(fullContent, bookmarkId);
+          result.summary = summaryResult.summary;
+          result.keywords = summaryResult.keywords;
+          result.tags = summaryResult.tags;
+          result.tokensUsed = summaryResult.tokensUsed;
 
-        // If summarization fails but is retryable, throw to trigger retry
-        if (isRetryableError(err)) {
-          throw err;
+          // Update bookmark with summary data
+          await updateBookmarkSummary(bookmarkId, summaryResult);
+
+          logger.stepComplete("summarization" as WorkflowStep, stepStartTime, {
+            summaryLength: summaryResult.summary.length,
+            keywordsCount: summaryResult.keywords.length,
+            tagsCount: summaryResult.tags.length,
+            tokensUsed: summaryResult.tokensUsed,
+          });
+
+          summarizationTimer.logMetrics(logger, "summarization", {
+            tokensUsed: summaryResult.tokensUsed,
+          });
+        } catch (error) {
+          const err = error as Error;
+          const workflowError = createWorkflowError(
+            err,
+            "summarization" as WorkflowStep,
+            {
+              contentLength: fullContent.length,
+            }
+          );
+
+          logger.stepFailed(
+            "summarization" as WorkflowStep,
+            stepStartTime,
+            err,
+            {
+              errorType: workflowError.errorType,
+              retryable: workflowError.retryable,
+            }
+          );
+
+          result.errors?.push({
+            step: "summarization" as WorkflowStep,
+            message: err.message,
+            timestamp: new Date(),
+            retryable: isRetryableError(err),
+            stackTrace: err.stack,
+          });
+
+          // If summarization fails but is retryable, throw to trigger retry
+          if (isRetryableError(err)) {
+            throw err;
+          }
         }
+      } else {
+        logger.info("AI summarization disabled by feature flag, skipping", {
+          step: "summarization",
+        });
       }
 
       // Step 3: Media Detection and Download (if enabled)
-      if (enableMediaDownload) {
-        logger.info("Step 3: Media detection", { bookmarkId });
+      const mediaDownloadEnabled = getFeatureFlag("ENABLE_MEDIA_DOWNLOAD");
+      const shouldProcessMedia = enableMediaDownload && mediaDownloadEnabled;
+
+      if (shouldProcessMedia) {
+        const mediaTimer = new PerformanceTimer();
+        const stepStartTime = logger.stepStart(
+          "media_detection" as WorkflowStep,
+          {
+            url,
+          }
+        );
 
         try {
-          // Placeholder for media detection - will be implemented in task 5
-          logger.info("Media detection step placeholder", {
+          const { detectMediaContent, shouldDownloadMedia } = await import(
+            "../tasks/media-detection"
+          );
+
+          // Detect media in content
+          const mediaDetection = await detectMediaContent(
+            url,
             bookmarkId,
-          });
+            shouldProcessMedia
+          );
 
-          // TODO: Implement when media-downloader package is ready
-          // const { detectMedia } = await import("@my-better-t-app/media-downloader");
-          // const mediaDetection = await detectMedia(url);
+          // Check if we should proceed with download
+          const maxSizeMB = getFeatureFlag("MAX_MEDIA_SIZE_MB");
+          if (
+            mediaDetection.hasMedia &&
+            shouldDownloadMedia(mediaDetection, maxSizeMB)
+          ) {
+            logger.stepComplete(
+              "media_detection" as WorkflowStep,
+              stepStartTime,
+              {
+                hasMedia: true,
+                mediaType: mediaDetection.mediaType,
+                estimatedSize: mediaDetection.estimatedSize,
+              }
+            );
 
-          // if (mediaDetection.hasMedia) {
-          //   logger.info("Media detected, starting download", {
-          //     bookmarkId,
-          //     mediaType: mediaDetection.mediaType,
-          //   });
+            // Step 4: Download media
+            const downloadTimer = new PerformanceTimer();
+            const downloadStartTime = logger.stepStart(
+              "media_download" as WorkflowStep,
+              {
+                mediaType: mediaDetection.mediaType,
+                maxSizeMB,
+              }
+            );
 
-          //   // Step 4: Download media
-          //   const { downloadMedia } = await import("@my-better-t-app/media-downloader");
-          //   const downloadResult = await downloadMedia(url, {
-          //     maxSize: parseInt(process.env.MAX_MEDIA_SIZE_MB || "500") * 1024 * 1024,
-          //   });
+            const { downloadMediaFile, enrichMediaMetadata } = await import(
+              "../tasks/media-download"
+            );
 
-          //   if (downloadResult.success) {
-          //     // Step 5: Upload to S3
-          //     logger.info("Step 5: Uploading media to storage", {
-          //       bookmarkId,
-          //     });
+            const downloadResult = await downloadMediaFile(
+              url,
+              bookmarkId,
+              maxSizeMB
+            );
 
-          //     const { uploadFile } = await import("@my-better-t-app/storage");
-          //     const storageKey = generateStorageKey(bookmarkId, downloadResult.metadata);
-          //     const uploadResult = await uploadFile(
-          //       downloadResult.filePath,
-          //       storageKey,
-          //       downloadResult.metadata
-          //     );
+            if (downloadResult.success && downloadResult.filePath) {
+              logger.stepComplete(
+                "media_download" as WorkflowStep,
+                downloadStartTime,
+                {
+                  fileSize: downloadResult.metadata.fileSize,
+                  format: downloadResult.metadata.format,
+                  duration: downloadResult.metadata.duration,
+                }
+              );
 
-          //     result.mediaMetadata = [
-          //       {
-          //         ...downloadResult.metadata,
-          //         storagePath: storageKey,
-          //         storageUrl: uploadResult.url,
-          //       },
-          //     ];
+              downloadTimer.logMetrics(logger, "media_download", {
+                fileSize: downloadResult.metadata.fileSize,
+              });
 
-          //     logger.info("Media uploaded successfully", {
-          //       bookmarkId,
-          //       storageKey,
-          //     });
-          //   }
-          // } else {
-          //   logger.info("No media detected", { bookmarkId });
-          // }
+              // Step 5: Upload to S3
+              const uploadTimer = new PerformanceTimer();
+              const uploadStartTime = logger.stepStart(
+                "storage_upload" as WorkflowStep,
+                {
+                  fileSize: downloadResult.metadata.fileSize,
+                }
+              );
+
+              const { uploadMediaToStorage } = await import(
+                "../tasks/storage-upload"
+              );
+
+              const uploadResult = await uploadMediaToStorage(
+                downloadResult.filePath,
+                bookmarkId,
+                downloadResult.metadata
+              );
+
+              // Enrich metadata with storage info
+              const enrichedMetadata = enrichMediaMetadata(
+                downloadResult.metadata,
+                url
+              );
+
+              result.mediaMetadata = [
+                {
+                  ...enrichedMetadata,
+                  storagePath: uploadResult.key,
+                  storageUrl: uploadResult.url,
+                },
+              ];
+
+              // Create database record for downloaded media
+              const { createDownloadedMediaRecord } = await import(
+                "../tasks/database-update"
+              );
+
+              await createDownloadedMediaRecord(
+                bookmarkId,
+                enrichedMetadata,
+                uploadResult,
+                url
+              );
+
+              logger.stepComplete(
+                "storage_upload" as WorkflowStep,
+                uploadStartTime,
+                {
+                  storageKey: uploadResult.key,
+                  uploadSize: uploadResult.size,
+                }
+              );
+
+              uploadTimer.logMetrics(logger, "storage_upload", {
+                fileSize: uploadResult.size,
+              });
+
+              mediaTimer.logMetrics(logger, "media_processing_total", {
+                fileSize: uploadResult.size,
+              });
+            }
+          } else {
+            logger.stepComplete(
+              "media_detection" as WorkflowStep,
+              stepStartTime,
+              {
+                hasMedia: mediaDetection.hasMedia,
+                reason: !mediaDetection.hasMedia
+                  ? "no_media"
+                  : "size_exceeds_limit",
+              }
+            );
+          }
         } catch (error) {
           const err = error as Error;
-          logger.error("Media processing failed", {
-            bookmarkId,
-            error: err.message,
-            errorType: classifyError(err),
-          });
+          const workflowError = createWorkflowError(
+            err,
+            "media_download" as WorkflowStep,
+            {
+              url,
+            }
+          );
+
+          logger.stepFailed(
+            "media_download" as WorkflowStep,
+            stepStartTime,
+            err,
+            {
+              errorType: workflowError.errorType,
+              retryable: workflowError.retryable,
+            }
+          );
 
           result.errors?.push({
             step: "media_download" as WorkflowStep,
@@ -182,68 +350,114 @@ export const bookmarkEnrichmentWorkflow = task({
             stackTrace: err.stack,
           });
 
+          // Mark media download as failed in database
+          try {
+            const { markMediaDownloadFailed } = await import(
+              "../tasks/database-update"
+            );
+            await markMediaDownloadFailed(bookmarkId, url, err.message);
+          } catch (dbError) {
+            logger.warn("Failed to mark media download as failed", {
+              bookmarkId,
+              error: dbError,
+            });
+          }
+
           // Media download failure is not critical, continue
         }
       } else {
-        logger.info("Media download disabled, skipping", {
-          bookmarkId,
-        });
+        if (!enableMediaDownload) {
+          logger.info("Media download disabled by workflow input, skipping", {
+            step: "media_detection",
+            reason: "disabled_by_input",
+          });
+        } else if (!mediaDownloadEnabled) {
+          logger.info("Media download disabled by feature flag, skipping", {
+            step: "media_detection",
+            reason: "disabled_by_flag",
+          });
+        }
       }
 
       // Step 6: Update database with final status
-      logger.info("Step 6: Updating database", { bookmarkId });
+      const dbUpdateTimer = new PerformanceTimer();
+      const dbUpdateStartTime = logger.stepStart(
+        "database_update" as WorkflowStep
+      );
 
       try {
+        const { determineFinalStatus, updateBookmarkEnrichment } = await import(
+          "../tasks/database-update"
+        );
+
         // Determine final status
         const hasErrors = (result.errors?.length ?? 0) > 0;
-        const hasSuccessfulData = !!(result.summary || result.mediaMetadata);
+        const hasSummary = !!result.summary;
+        const hasMedia = !!(
+          result.mediaMetadata && result.mediaMetadata.length > 0
+        );
 
-        let finalStatus: "COMPLETED" | "PARTIAL_SUCCESS" | "FAILED";
-        if (!hasErrors) {
-          finalStatus = "COMPLETED";
-        } else if (hasSuccessfulData) {
-          finalStatus = "PARTIAL_SUCCESS";
-        } else {
-          finalStatus = "FAILED";
-        }
+        const finalStatus = determineFinalStatus(
+          hasErrors,
+          hasSummary,
+          hasMedia
+        );
 
-        // TODO: Implement database update when db package is ready
-        // const { prisma } = await import("@my-better-t-app/db");
-        // await prisma.bookmarkPost.update({
-        //   where: { id: bookmarkId },
-        //   data: {
-        //     summary: result.summary,
-        //     keywords: result.keywords,
-        //     tags: result.tags,
-        //     processingStatus: finalStatus,
-        //     enrichedAt: new Date(),
-        //     errorMessage: result.errors?.map(e => e.message).join("; "),
-        //   },
-        // });
-
-        logger.info("Database updated successfully", {
-          bookmarkId,
+        // Update bookmark with final enrichment data
+        await updateBookmarkEnrichment(bookmarkId, ctx.run.id, {
+          summary: result.summary,
+          keywords: result.keywords,
+          tags: result.tags,
           status: finalStatus,
+          errors: result.errors,
         });
+
+        logger.stepComplete(
+          "database_update" as WorkflowStep,
+          dbUpdateStartTime,
+          {
+            status: finalStatus,
+            hasSummary,
+            hasMedia,
+            errorsCount: result.errors?.length ?? 0,
+          }
+        );
+
+        dbUpdateTimer.logMetrics(logger, "database_update");
 
         result.success = finalStatus !== "FAILED";
         result.executionTimeMs = Date.now() - startTime;
 
-        logger.info("Workflow completed", {
-          bookmarkId,
-          success: result.success,
+        logger.workflowComplete(startTime, result.success, {
           status: finalStatus,
-          executionTimeMs: result.executionTimeMs,
           errorsCount: result.errors?.length ?? 0,
+          hasSummary,
+          hasMedia,
+          tokensUsed: result.tokensUsed,
+        });
+
+        workflowTimer.logMetrics(logger, "workflow_total", {
+          status: finalStatus,
+          tokensUsed: result.tokensUsed,
         });
 
         return result;
       } catch (error) {
         const err = error as Error;
-        logger.error("Database update failed", {
-          bookmarkId,
-          error: err.message,
-        });
+        const workflowError = createWorkflowError(
+          err,
+          "database_update" as WorkflowStep
+        );
+
+        logger.stepFailed(
+          "database_update" as WorkflowStep,
+          dbUpdateStartTime,
+          err,
+          {
+            errorType: workflowError.errorType,
+            retryable: workflowError.retryable,
+          }
+        );
 
         result.errors?.push({
           step: "database_update" as WorkflowStep,
@@ -258,27 +472,20 @@ export const bookmarkEnrichmentWorkflow = task({
       }
     } catch (error) {
       const err = error as Error;
-      logger.error("Workflow failed with unhandled error", {
-        bookmarkId,
-        error: err.message,
-        stackTrace: err.stack,
+      logger.workflowFailed(startTime, err, {
+        errorsCount: result.errors?.length ?? 0,
       });
 
       // Update bookmark status to FAILED
       try {
-        // TODO: Implement when db package is ready
-        // const { prisma } = await import("@my-better-t-app/db");
-        // await prisma.bookmarkPost.update({
-        //   where: { id: bookmarkId },
-        //   data: {
-        //     processingStatus: "FAILED",
-        //     errorMessage: err.message,
-        //   },
-        // });
+        const { updateBookmarkStatus } = await import(
+          "../tasks/database-update"
+        );
+        await updateBookmarkStatus(bookmarkId, "FAILED", err.message);
       } catch (dbError) {
-        logger.error("Failed to update bookmark status to FAILED", {
+        const dbErr = dbError as Error;
+        logger.error("Failed to update bookmark status to FAILED", dbErr, {
           bookmarkId,
-          error: dbError,
         });
       }
 
@@ -290,18 +497,3 @@ export const bookmarkEnrichmentWorkflow = task({
     }
   },
 });
-
-/**
- * Helper function to generate unique storage keys for media files
- * @param bookmarkId - The bookmark ID
- * @param metadata - Media metadata containing format information
- * @returns Storage key path
- */
-function generateStorageKey(
-  bookmarkId: string,
-  metadata: { format?: string }
-): string {
-  const timestamp = Date.now();
-  const extension = metadata.format || "mp4";
-  return `media/${bookmarkId}/${timestamp}.${extension}`;
-}

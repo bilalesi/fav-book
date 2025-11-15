@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as MonitoringRouteImport } from './routes/monitoring'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ImportRouteImport } from './routes/import'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -27,6 +28,11 @@ import { Route as BookmarksIdRouteImport } from './routes/bookmarks.$id'
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MonitoringRoute = MonitoringRouteImport.update({
+  id: '/monitoring',
+  path: '/monitoring',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -103,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/import': typeof ImportRouteWithChildren
   '/login': typeof LoginRoute
+  '/monitoring': typeof MonitoringRoute
   '/settings': typeof SettingsRoute
   '/bookmarks/$id': typeof BookmarksIdRoute
   '/collections/$id': typeof CollectionsIdRoute
@@ -116,6 +123,7 @@ export interface FileRoutesByTo {
   '/404': typeof R404Route
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/monitoring': typeof MonitoringRoute
   '/settings': typeof SettingsRoute
   '/bookmarks/$id': typeof BookmarksIdRoute
   '/collections/$id': typeof CollectionsIdRoute
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/import': typeof ImportRouteWithChildren
   '/login': typeof LoginRoute
+  '/monitoring': typeof MonitoringRoute
   '/settings': typeof SettingsRoute
   '/bookmarks/$id': typeof BookmarksIdRoute
   '/collections/$id': typeof CollectionsIdRoute
@@ -151,6 +160,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/import'
     | '/login'
+    | '/monitoring'
     | '/settings'
     | '/bookmarks/$id'
     | '/collections/$id'
@@ -164,6 +174,7 @@ export interface FileRouteTypes {
     | '/404'
     | '/dashboard'
     | '/login'
+    | '/monitoring'
     | '/settings'
     | '/bookmarks/$id'
     | '/collections/$id'
@@ -180,6 +191,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/import'
     | '/login'
+    | '/monitoring'
     | '/settings'
     | '/bookmarks/$id'
     | '/collections/$id'
@@ -197,6 +209,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   ImportRoute: typeof ImportRouteWithChildren
   LoginRoute: typeof LoginRoute
+  MonitoringRoute: typeof MonitoringRoute
   SettingsRoute: typeof SettingsRoute
 }
 
@@ -207,6 +220,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/monitoring': {
+      id: '/monitoring'
+      path: '/monitoring'
+      fullPath: '/monitoring'
+      preLoaderRoute: typeof MonitoringRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -352,6 +372,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   ImportRoute: ImportRouteWithChildren,
   LoginRoute: LoginRoute,
+  MonitoringRoute: MonitoringRoute,
   SettingsRoute: SettingsRoute,
 }
 export const routeTree = rootRouteImport

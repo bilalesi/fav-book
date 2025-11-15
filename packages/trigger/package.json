@@ -15,16 +15,21 @@
         "build": "tsdown"
     },
     "devDependencies": {
+        "@trigger.dev/build": "4.1.0",
         "tsdown": "catalog:"
     },
     "peerDependencies": {
         "typescript": "^5"
     },
     "dependencies": {
-        "@trigger.dev/sdk": "^3.2.4",
-        "zod": "catalog:",
-        "dotenv": "catalog:",
+        "@my-better-t-app/ai": "workspace:*",
         "@my-better-t-app/db": "workspace:*",
-        "@my-better-t-app/shared": "workspace:*"
+        "@my-better-t-app/media-downloader": "workspace:*",
+        "@my-better-t-app/shared": "workspace:*",
+        "@my-better-t-app/storage": "workspace:*",
+        "@trigger.dev/sdk": "4.1.0",
+        "dotenv": "catalog:",
+        "prom-client": "^15.1.0",
+        "zod": "catalog:"
     }
 }
