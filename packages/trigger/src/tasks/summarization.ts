@@ -1,4 +1,4 @@
-import { logger } from "@trigger.dev/sdk/v3";
+import { logger } from "@trigger.dev/sdk";
 import type { SummaryResult } from "../types";
 
 /**
@@ -72,13 +72,23 @@ export async function updateBookmarkSummary(
     // Import database client
     const prisma = (await import("@my-better-t-app/db")).default;
 
-    // Update bookmark with summary data
-    await prisma.bookmarkPost.update({
-      where: { id: bookmarkId },
-      data: {
+    // Update bookmark enrichment with summary data
+    await prisma.bookmarkEnrichment.upsert({
+      where: { bookmarkPostId: bookmarkId },
+      create: {
+        bookmarkPostId: bookmarkId,
         summary: summaryResult.summary,
         keywords: summaryResult.keywords,
         tags: summaryResult.tags,
+        processingStatus: "COMPLETED",
+        enrichedAt: new Date(),
+      },
+      update: {
+        summary: summaryResult.summary,
+        keywords: summaryResult.keywords,
+        tags: summaryResult.tags,
+        processingStatus: "COMPLETED",
+        enrichedAt: new Date(),
       },
     });
 

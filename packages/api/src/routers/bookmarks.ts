@@ -10,10 +10,7 @@ import { extractMetadata } from "../lib/metadata-extractor";
 import { tasks } from "@trigger.dev/sdk/v3";
 import type { BookmarkEnrichmentInput } from "@my-better-t-app/trigger";
 
-// Validation schemas
 const platformSchema = z.enum(["TWITTER", "LINKEDIN", "GENERIC_URL"]);
-
-// Standard media type schema for output
 const mediaTypeSchema = z.enum(["IMAGE", "VIDEO", "LINK"]);
 
 // Input media type schema - accepts both lowercase and uppercase, then transforms to uppercase
