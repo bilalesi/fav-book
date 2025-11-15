@@ -4,9 +4,20 @@ import { BookmarkCard } from "@/components/bookmark-card";
 import { useBookmarksList } from "@/hooks/use-bookmarks";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { BookmarkFilters as BookmarkFiltersType } from "@my-better-t-app/shared";
 import { z } from "zod";
 import { useEffect, useState, useRef, useCallback } from "react";
+import { client } from "@/utils/orpc";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { useCollectionsList } from "@/hooks/use-collections";
 
 // Define search params schema
 const bookmarksSearchSchema = z.object({
@@ -27,6 +38,16 @@ export const Route = createFileRoute("/bookmarks/")({
 function BookmarksListPage() {
   const navigate = useNavigate({ from: "/bookmarks" });
   const searchParams = Route.useSearch();
+  const queryClient = useQueryClient();
+
+  // Bulk selection state
+  const [selectedBookmarkIds, setSelectedBookmarkIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [isProcessingBulk, setIsProcessingBulk] = useState(false);
+
+  // Fetch collections for bulk operations
+  const { data: collections = [] } = useCollectionsList();
 
   // Parse filters from URL
   const [filters, setFilters] = useState<BookmarkFiltersType>(() => {
@@ -228,6 +249,90 @@ function BookmarksListPage() {
     });
   };
 
+  // Bulk selection handlers
+  const handleSelectAll = () => {
+    if (selectedBookmarkIds.size === bookmarks.length) {
+      setSelectedBookmarkIds(new Set());
+    } else {
+      setSelectedBookmarkIds(new Set(bookmarks.map((b) => b.id)));
+    }
+  };
+
+  const handleSelectBookmark = (bookmarkId: string) => {
+    const newSelection = new Set(selectedBookmarkIds);
+    if (newSelection.has(bookmarkId)) {
+      newSelection.delete(bookmarkId);
+    } else {
+      newSelection.add(bookmarkId);
+    }
+    setSelectedBookmarkIds(newSelection);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedBookmarkIds.size === 0) return;
+
+    if (
+      !confirm(
+        `Are you sure you want to delete ${selectedBookmarkIds.size} bookmark(s)?`
+      )
+    ) {
+      return;
+    }
+
+    setIsProcessingBulk(true);
+    try {
+      await client.bookmarks.bulkDelete({
+        bookmarkIds: Array.from(selectedBookmarkIds),
+      });
+
+      // Invalidate queries to refresh the list
+      queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
+
+      toast.success(
+        `Successfully deleted ${selectedBookmarkIds.size} bookmark(s)`
+      );
+      setSelectedBookmarkIds(new Set());
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete bookmarks"
+      );
+    } finally {
+      setIsProcessingBulk(false);
+    }
+  };
+
+  const handleBulkAddToCollection = async (collectionId: string) => {
+    if (selectedBookmarkIds.size === 0) return;
+
+    setIsProcessingBulk(true);
+    try {
+      await client.bookmarks.bulkAddToCollections({
+        bookmarkIds: Array.from(selectedBookmarkIds),
+        collectionIds: [collectionId],
+      });
+
+      // Invalidate queries to refresh the list
+      queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
+      queryClient.invalidateQueries({ queryKey: ["collections"] });
+
+      const collection = collections.find((c) => c.id === collectionId);
+      toast.success(
+        `Successfully added ${selectedBookmarkIds.size} bookmark(s) to ${
+          collection?.name || "collection"
+        }`
+      );
+      setSelectedBookmarkIds(new Set());
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to add bookmarks to collection"
+      );
+    } finally {
+      setIsProcessingBulk(false);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="mb-6">
@@ -248,6 +353,68 @@ function BookmarksListPage() {
           onSortChange={handleSortChange}
         />
       </div>
+
+      {/* Bulk Actions Toolbar */}
+      {bookmarks.length > 0 && (
+        <div className="mb-4 flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              checked={
+                selectedBookmarkIds.size === bookmarks.length &&
+                bookmarks.length > 0
+              }
+              onCheckedChange={handleSelectAll}
+              aria-label="Select all bookmarks"
+            />
+            <span className="text-sm text-muted-foreground">
+              {selectedBookmarkIds.size > 0
+                ? `${selectedBookmarkIds.size} selected`
+                : "Select all"}
+            </span>
+          </div>
+
+          {selectedBookmarkIds.size > 0 && (
+            <div className="flex items-center gap-2 ml-auto">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isProcessingBulk}
+                  >
+                    Add to Collection
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  {collections.length === 0 ? (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      No collections available
+                    </div>
+                  ) : (
+                    collections.map((collection) => (
+                      <DropdownMenuItem
+                        key={collection.id}
+                        onClick={() => handleBulkAddToCollection(collection.id)}
+                      >
+                        {collection.name}
+                      </DropdownMenuItem>
+                    ))
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBulkDelete}
+                disabled={isProcessingBulk}
+              >
+                {isProcessingBulk ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Bookmarks List */}
       {isLoading ? (
@@ -311,7 +478,17 @@ function BookmarksListPage() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {bookmarks.map((bookmark) => (
-              <BookmarkCard key={bookmark.id} bookmark={bookmark} />
+              <div key={bookmark.id} className="relative">
+                <div className="absolute top-2 left-2 z-10">
+                  <Checkbox
+                    checked={selectedBookmarkIds.has(bookmark.id)}
+                    onCheckedChange={() => handleSelectBookmark(bookmark.id)}
+                    aria-label={`Select bookmark ${bookmark.id}`}
+                    className="bg-background border-2"
+                  />
+                </div>
+                <BookmarkCard bookmark={bookmark} />
+              </div>
             ))}
           </div>
 

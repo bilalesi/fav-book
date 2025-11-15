@@ -17,7 +17,10 @@ import { Route as CollectionsRouteImport } from './routes/collections'
 import { Route as BookmarksRouteImport } from './routes/bookmarks'
 import { Route as R404RouteImport } from './routes/404'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ImportIndexRouteImport } from './routes/import.index'
+import { Route as CollectionsIndexRouteImport } from './routes/collections.index'
 import { Route as BookmarksIndexRouteImport } from './routes/bookmarks.index'
+import { Route as ImportUrlsRouteImport } from './routes/import.urls'
 import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
 import { Route as BookmarksIdRouteImport } from './routes/bookmarks.$id'
 
@@ -61,10 +64,25 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ImportIndexRoute = ImportIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ImportRoute,
+} as any)
+const CollectionsIndexRoute = CollectionsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CollectionsRoute,
+} as any)
 const BookmarksIndexRoute = BookmarksIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => BookmarksRoute,
+} as any)
+const ImportUrlsRoute = ImportUrlsRouteImport.update({
+  id: '/urls',
+  path: '/urls',
+  getParentRoute: () => ImportRoute,
 } as any)
 const CollectionsIdRoute = CollectionsIdRouteImport.update({
   id: '/$id',
@@ -83,24 +101,28 @@ export interface FileRoutesByFullPath {
   '/bookmarks': typeof BookmarksRouteWithChildren
   '/collections': typeof CollectionsRouteWithChildren
   '/dashboard': typeof DashboardRoute
-  '/import': typeof ImportRoute
+  '/import': typeof ImportRouteWithChildren
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/bookmarks/$id': typeof BookmarksIdRoute
   '/collections/$id': typeof CollectionsIdRoute
+  '/import/urls': typeof ImportUrlsRoute
   '/bookmarks/': typeof BookmarksIndexRoute
+  '/collections/': typeof CollectionsIndexRoute
+  '/import/': typeof ImportIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/404': typeof R404Route
-  '/collections': typeof CollectionsRouteWithChildren
   '/dashboard': typeof DashboardRoute
-  '/import': typeof ImportRoute
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/bookmarks/$id': typeof BookmarksIdRoute
   '/collections/$id': typeof CollectionsIdRoute
+  '/import/urls': typeof ImportUrlsRoute
   '/bookmarks': typeof BookmarksIndexRoute
+  '/collections': typeof CollectionsIndexRoute
+  '/import': typeof ImportIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -109,12 +131,15 @@ export interface FileRoutesById {
   '/bookmarks': typeof BookmarksRouteWithChildren
   '/collections': typeof CollectionsRouteWithChildren
   '/dashboard': typeof DashboardRoute
-  '/import': typeof ImportRoute
+  '/import': typeof ImportRouteWithChildren
   '/login': typeof LoginRoute
   '/settings': typeof SettingsRoute
   '/bookmarks/$id': typeof BookmarksIdRoute
   '/collections/$id': typeof CollectionsIdRoute
+  '/import/urls': typeof ImportUrlsRoute
   '/bookmarks/': typeof BookmarksIndexRoute
+  '/collections/': typeof CollectionsIndexRoute
+  '/import/': typeof ImportIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -129,19 +154,23 @@ export interface FileRouteTypes {
     | '/settings'
     | '/bookmarks/$id'
     | '/collections/$id'
+    | '/import/urls'
     | '/bookmarks/'
+    | '/collections/'
+    | '/import/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/404'
-    | '/collections'
     | '/dashboard'
-    | '/import'
     | '/login'
     | '/settings'
     | '/bookmarks/$id'
     | '/collections/$id'
+    | '/import/urls'
     | '/bookmarks'
+    | '/collections'
+    | '/import'
   id:
     | '__root__'
     | '/'
@@ -154,7 +183,10 @@ export interface FileRouteTypes {
     | '/settings'
     | '/bookmarks/$id'
     | '/collections/$id'
+    | '/import/urls'
     | '/bookmarks/'
+    | '/collections/'
+    | '/import/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -163,7 +195,7 @@ export interface RootRouteChildren {
   BookmarksRoute: typeof BookmarksRouteWithChildren
   CollectionsRoute: typeof CollectionsRouteWithChildren
   DashboardRoute: typeof DashboardRoute
-  ImportRoute: typeof ImportRoute
+  ImportRoute: typeof ImportRouteWithChildren
   LoginRoute: typeof LoginRoute
   SettingsRoute: typeof SettingsRoute
 }
@@ -226,12 +258,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/import/': {
+      id: '/import/'
+      path: '/'
+      fullPath: '/import/'
+      preLoaderRoute: typeof ImportIndexRouteImport
+      parentRoute: typeof ImportRoute
+    }
+    '/collections/': {
+      id: '/collections/'
+      path: '/'
+      fullPath: '/collections/'
+      preLoaderRoute: typeof CollectionsIndexRouteImport
+      parentRoute: typeof CollectionsRoute
+    }
     '/bookmarks/': {
       id: '/bookmarks/'
       path: '/'
       fullPath: '/bookmarks/'
       preLoaderRoute: typeof BookmarksIndexRouteImport
       parentRoute: typeof BookmarksRoute
+    }
+    '/import/urls': {
+      id: '/import/urls'
+      path: '/urls'
+      fullPath: '/import/urls'
+      preLoaderRoute: typeof ImportUrlsRouteImport
+      parentRoute: typeof ImportRoute
     }
     '/collections/$id': {
       id: '/collections/$id'
@@ -266,15 +319,30 @@ const BookmarksRouteWithChildren = BookmarksRoute._addFileChildren(
 
 interface CollectionsRouteChildren {
   CollectionsIdRoute: typeof CollectionsIdRoute
+  CollectionsIndexRoute: typeof CollectionsIndexRoute
 }
 
 const CollectionsRouteChildren: CollectionsRouteChildren = {
   CollectionsIdRoute: CollectionsIdRoute,
+  CollectionsIndexRoute: CollectionsIndexRoute,
 }
 
 const CollectionsRouteWithChildren = CollectionsRoute._addFileChildren(
   CollectionsRouteChildren,
 )
+
+interface ImportRouteChildren {
+  ImportUrlsRoute: typeof ImportUrlsRoute
+  ImportIndexRoute: typeof ImportIndexRoute
+}
+
+const ImportRouteChildren: ImportRouteChildren = {
+  ImportUrlsRoute: ImportUrlsRoute,
+  ImportIndexRoute: ImportIndexRoute,
+}
+
+const ImportRouteWithChildren =
+  ImportRoute._addFileChildren(ImportRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -282,7 +350,7 @@ const rootRouteChildren: RootRouteChildren = {
   BookmarksRoute: BookmarksRouteWithChildren,
   CollectionsRoute: CollectionsRouteWithChildren,
   DashboardRoute: DashboardRoute,
-  ImportRoute: ImportRoute,
+  ImportRoute: ImportRouteWithChildren,
   LoginRoute: LoginRoute,
   SettingsRoute: SettingsRoute,
 }

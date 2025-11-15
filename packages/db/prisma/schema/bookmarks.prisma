@@ -1,6 +1,7 @@
 enum Platform {
     TWITTER
     LINKEDIN
+    GENERIC_URL
 }
 
 enum MediaType {

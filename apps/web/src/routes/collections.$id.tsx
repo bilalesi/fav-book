@@ -33,12 +33,47 @@ import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/collections/$id")({
   component: RouteComponent,
+  errorComponent: ({ error }) => {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <div className="text-center py-12">
+          <h2 className="text-xl font-semibold mb-2 text-destructive">
+            Error Loading Collection
+          </h2>
+          <p className="text-muted-foreground mb-4">
+            {error?.message || "An unexpected error occurred"}
+          </p>
+          <Link to="/collections">
+            <Button>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Collections
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  },
+  pendingComponent: () => {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-muted rounded w-1/3" />
+          <div className="h-4 bg-muted rounded w-1/2" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-64 bg-muted rounded" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  },
 });
 
 function RouteComponent() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
-  const { data: collection, isLoading, refetch } = useCollection(id);
+  const { data: collection, isLoading, error, refetch } = useCollection(id);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addBookmarkDialogOpen, setAddBookmarkDialogOpen] = useState(false);
@@ -59,6 +94,27 @@ function RouteComponent() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <div className="text-center py-12">
+          <h2 className="text-xl font-semibold mb-2 text-destructive">
+            Error Loading Collection
+          </h2>
+          <p className="text-muted-foreground mb-4">
+            {error?.message || "Failed to load collection"}
+          </p>
+          <Link to="/collections">
+            <Button>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Collections
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (!collection) {
     return (
       <div className="container mx-auto px-4 py-6">
@@ -70,7 +126,7 @@ function RouteComponent() {
           </p>
           <Link to="/collections">
             <Button>
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Collections
             </Button>
           </Link>

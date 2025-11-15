@@ -208,17 +208,41 @@ function BookmarkDetailPage() {
           {linkMedia.length > 0 && (
             <div className="space-y-2">
               <h3 className="text-sm font-medium">Links</h3>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {linkMedia.map((media) => (
                   <a
                     key={media.id}
                     href={media.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-blue-600 hover:underline break-all"
+                    className="block border rounded-lg overflow-hidden hover:bg-accent transition-colors"
                   >
-                    <ExternalLinkIcon className="size-4 shrink-0" />
-                    {media.url}
+                    {media.thumbnailUrl && (
+                      <div className="aspect-video bg-muted">
+                        <img
+                          src={media.thumbnailUrl}
+                          alt={media.metadata?.title || "Link preview"}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      </div>
+                    )}
+                    <div className="p-4 space-y-2">
+                      {media.metadata?.title && (
+                        <p className="font-medium text-base">
+                          {media.metadata.title}
+                        </p>
+                      )}
+                      {media.metadata?.description && (
+                        <p className="text-sm text-muted-foreground">
+                          {media.metadata.description}
+                        </p>
+                      )}
+                      <p className="text-sm text-muted-foreground flex items-center gap-2">
+                        <ExternalLinkIcon className="size-4" />
+                        {new URL(media.url).hostname}
+                      </p>
+                    </div>
                   </a>
                 ))}
               </div>

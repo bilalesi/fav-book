@@ -15,6 +15,7 @@ export function useCollection(id: string) {
   return useQuery({
     queryKey: ["collections", "get", id],
     queryFn: () => client.collections.get({ id }),
+    enabled: !!id, // Only run query if id exists
   });
 }
 

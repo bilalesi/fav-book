@@ -45,6 +45,21 @@ function transformCollection(collection: any): Collection {
         thumbnailUrl: m.thumbnailUrl,
         metadata: m.metadata as Record<string, any> | undefined,
       })),
+      categories: bc.bookmarkPost.categories?.map((cat: any) => ({
+        id: cat.category.id,
+        name: cat.category.name,
+        userId: cat.category.userId,
+        isSystem: cat.category.isSystem,
+        createdAt: cat.category.createdAt,
+      })),
+      collections: bc.bookmarkPost.collections?.map((coll: any) => ({
+        id: coll.collection.id,
+        userId: coll.collection.userId,
+        name: coll.collection.name,
+        description: coll.collection.description,
+        createdAt: coll.collection.createdAt,
+        updatedAt: coll.collection.updatedAt,
+      })),
     })),
   };
 }
@@ -110,6 +125,16 @@ export const collectionsRouter = {
               bookmarkPost: {
                 include: {
                   media: true,
+                  categories: {
+                    include: {
+                      category: true,
+                    },
+                  },
+                  collections: {
+                    include: {
+                      collection: true,
+                    },
+                  },
                 },
               },
             },

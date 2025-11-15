@@ -124,7 +124,7 @@
         }
       });
 
-      // Extract links
+      // Extract links from tweet text
       const links = [];
       const linkElements = article.querySelectorAll('[data-testid="tweetText"] a[href^="http"]');
       linkElements.forEach(link => {
@@ -134,12 +134,44 @@
         }
       });
 
-      // Add links as media items
+      // Extract link cards (OG cards) - tweets with just a link preview
+      const cardElements = article.querySelectorAll('[data-testid="card.wrapper"]');
+      cardElements.forEach(card => {
+        // Get the link from the card
+        const cardLink = card.querySelector('a[href^="http"]');
+        const cardUrl = cardLink?.href;
+        
+        if (cardUrl && !cardUrl.includes('twitter.com') && !cardUrl.includes('x.com')) {
+          // Get the card image
+          const cardImage = card.querySelector('img');
+          const cardImageUrl = cardImage?.src;
+          
+          // Get the card title and description
+          const cardTitle = card.querySelector('[dir="ltr"]')?.textContent || '';
+          const cardDescription = card.querySelector('[data-testid="card.layoutLarge.detail"] > div:last-child')?.textContent || '';
+          
+          media.push({
+            type: 'LINK',
+            url: cardUrl,
+            thumbnailUrl: cardImageUrl ? cardImageUrl.split('?')[0] : undefined,
+            metadata: {
+              title: cardTitle,
+              description: cardDescription
+            }
+          });
+        }
+      });
+
+      // Add text links as media items (if not already captured as cards)
       links.forEach(url => {
-        media.push({
-          type: 'link',
-          url: url
-        });
+        // Check if this URL is already in media as a card
+        const alreadyExists = media.some(m => m.url === url);
+        if (!alreadyExists) {
+          media.push({
+            type: 'LINK',
+            url: url
+          });
+        }
       });
 
       // Construct tweet URL

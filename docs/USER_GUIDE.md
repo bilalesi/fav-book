@@ -1,25 +1,27 @@
 # Social Bookmarks Manager - User Guide
 
-Welcome to the Social Bookmarks Manager! This guide will help you get started with managing your social media bookmarks from X (Twitter) and LinkedIn.
+Welcome to the Social Bookmarks Manager! This guide will help you get started with managing your social media bookmarks from X (Twitter) and LinkedIn, as well as saving any URL from across the web.
 
 ## Table of Contents
 
 1. [Getting Started](#getting-started)
 2. [Authentication](#authentication)
 3. [Saving Bookmarks](#saving-bookmarks)
-4. [Browsing and Searching](#browsing-and-searching)
-5. [Collections](#collections)
-6. [Categories](#categories)
-7. [Bulk Import](#bulk-import)
-8. [Settings](#settings)
+4. [Saving URL Bookmarks](#saving-url-bookmarks)
+5. [Browsing and Searching](#browsing-and-searching)
+6. [Collections](#collections)
+7. [Categories](#categories)
+8. [Bulk Import](#bulk-import)
+9. [Settings](#settings)
 
 ## Getting Started
 
 ### What is Social Bookmarks Manager?
 
-Social Bookmarks Manager is a powerful tool that helps you save, organize, and search through your favorite posts from X (Twitter) and LinkedIn. Unlike native bookmarking features, our app:
+Social Bookmarks Manager is a powerful tool that helps you save, organize, and search through your favorite posts from X (Twitter) and LinkedIn, as well as any URL from across the web. Unlike native bookmarking features, our app:
 
 - **Preserves complete content** - Text, images, videos, and links are saved even if the original post is deleted
+- **Universal bookmarking** - Save any web page, not just social media posts
 - **Advanced search** - Find bookmarks quickly with full-text search
 - **Smart organization** - Group bookmarks into collections and categorize by topic
 - **Cross-platform** - Access your bookmarks from any device
@@ -106,6 +108,278 @@ When you save a bookmark, we capture:
 
 For importing existing bookmarks, see the [Bulk Import](#bulk-import) section below.
 
+## Saving URL Bookmarks
+
+In addition to social media posts, you can save any URL from across the web. This feature allows you to bookmark articles, documentation, videos, or any web page you want to save for later.
+
+### Quick Save from Browser Extension
+
+The easiest way to save a URL is using the browser extension's quick save feature.
+
+#### How to Quick Save
+
+1. **Navigate to any web page** you want to bookmark
+2. **Click the extension icon** in your browser toolbar
+3. The popup will show:
+   - Current page URL
+   - Page title (automatically detected)
+   - Collection selector (optional)
+4. **Select collections** (optional) - Choose one or more collections to organize your bookmark
+5. **Click "Save"** to bookmark the page
+6. You'll see a **confirmation message** within 2 seconds
+
+#### What Gets Saved?
+
+When you save a URL bookmark, the system automatically extracts:
+
+- **Page title** - The title of the web page
+- **Description** - Meta description or Open Graph description
+- **Favicon** - The site's icon for visual identification
+- **Domain name** - For quick reference
+- **URL** - The complete web address
+- **Timestamp** - When you saved it
+
+**Note:** If metadata extraction fails (e.g., due to network issues), the system will use the domain name as a fallback title and still save your bookmark.
+
+#### Duplicate Detection
+
+The extension is smart about duplicates:
+
+- **When you open the popup** on a page you've already bookmarked, you'll see a visual indicator
+- **Already bookmarked pages** show a different state with options to:
+  - View the existing bookmark
+  - Edit bookmark details
+  - Remove the bookmark
+- **Attempting to save a duplicate** will show a notification instead of creating a new bookmark
+
+#### Offline Support
+
+The extension works even when you're offline:
+
+- **No internet connection?** Your bookmark is saved locally in a queue
+- **Automatic retry** - When connectivity is restored, queued bookmarks are automatically synced
+- **Visual feedback** - You'll see "Saved locally, will sync when online" message
+- **Exponential backoff** - The extension retries with increasing delays (max 3 attempts)
+- **Queue limit** - Up to 50 bookmarks can be queued locally
+
+### Organizing URL Bookmarks
+
+#### Adding to Collections During Save
+
+1. When the extension popup opens, you'll see a **collection selector**
+2. **Click the dropdown** to see your collections
+3. **Select one or more collections** to organize your bookmark
+4. The bookmark will be added to selected collections immediately upon save
+
+#### Adding to Collections After Save
+
+1. Go to the **Bookmarks page** in the web app
+2. Find your URL bookmark
+3. Click to open the **bookmark details**
+4. Click **"Add to Collection"**
+5. Select collections and click **"Save"**
+
+### Batch Import URLs
+
+For importing multiple URLs at once, use the batch import feature in the web application.
+
+#### How to Batch Import
+
+1. **Navigate to Import > URLs** in the web app
+2. **Prepare your URL list:**
+   - One URL per line
+   - Must be valid http:// or https:// URLs
+   - No blank lines
+3. **Paste URLs** into the textarea
+4. **Select collections** (optional) - All imported URLs will be added to selected collections
+5. **Review validation:**
+   - Valid URLs show in green
+   - Invalid URLs show in red with error messages
+   - URL count is displayed
+6. **Click "Import"** to start the process
+
+#### Import Progress
+
+During import, you'll see:
+
+- **Progress bar** showing percentage completed
+- **Real-time status updates** (e.g., "Processing 15 of 50...")
+- **Processing indicator** while import is running
+- **Form is disabled** to prevent accidental changes
+
+#### Import Results
+
+After import completes, you'll see a detailed summary:
+
+- **Success count** - URLs successfully imported
+- **Duplicate count** - URLs that were already bookmarked (skipped)
+- **Failure count** - URLs that failed to import
+- **Error details** - Expandable list showing which URLs failed and why
+- **Retry option** - Ability to retry failed URLs
+- **View bookmarks link** - Quick link to see your imported bookmarks
+
+#### Import Best Practices
+
+- **Validate URLs first** - Check that all URLs are accessible before importing
+- **Batch size** - Recommended maximum of 100 URLs per batch for optimal performance
+- **Collection assignment** - Assign to collections during import to save time
+- **Review errors** - Check error details for failed imports and fix issues
+- **Skip duplicates** - The system automatically skips duplicates by default
+
+#### Common Import Errors
+
+- **Invalid URL format** - URL must start with http:// or https://
+- **Metadata extraction timeout** - Page took too long to load (3 second timeout)
+- **Network error** - Unable to reach the URL
+- **Access denied** - Page requires authentication or blocks automated access
+
+### Viewing URL Bookmarks
+
+URL bookmarks appear alongside your social media bookmarks in the main bookmarks view.
+
+#### Visual Identification
+
+URL bookmarks are displayed with:
+
+- **Favicon** - The site's icon (or a default globe icon)
+- **Page title** - The extracted or user-provided title
+- **Domain name** - Shown below the title for quick reference
+- **Description** - Page description if available
+- **Collections** - Any collections the bookmark belongs to
+- **Quick actions** - Edit, delete, and open URL buttons
+
+#### Filtering URL Bookmarks
+
+To see only URL bookmarks:
+
+1. Go to the **Bookmarks page**
+2. Click **"Filters"**
+3. Under **Platform**, select **"URLs"**
+4. Only URL bookmarks will be displayed
+
+You can combine this with other filters:
+
+- **Date range** - Find URLs saved in a specific time period
+- **Collections** - URLs in specific collections
+- **Search** - Search within URL bookmark titles and descriptions
+
+### Editing URL Bookmarks
+
+You can edit URL bookmark details after saving:
+
+1. **Open the bookmark** from the bookmarks page
+2. Click **"Edit"**
+3. You can modify:
+   - **Title** - Change the display title
+   - **Description** - Add or edit notes
+   - **Collections** - Add or remove collection associations
+4. Click **"Save"** to update
+
+**Note:** You cannot edit the URL itself. If you need to save a different URL, create a new bookmark.
+
+### Managing URL Bookmarks
+
+#### Bulk Operations
+
+Select multiple URL bookmarks to perform bulk actions:
+
+1. **Select bookmarks** - Click checkboxes on multiple URL bookmarks
+2. **Choose action:**
+   - **Add to collections** - Add all selected bookmarks to collections
+   - **Delete** - Remove multiple bookmarks at once
+3. **Confirm** the action
+
+#### Deleting URL Bookmarks
+
+To delete a single URL bookmark:
+
+1. Open the bookmark details
+2. Click **"Delete"**
+3. **Confirm deletion** in the dialog
+4. The bookmark is permanently removed
+
+### URL Bookmark Tips
+
+#### Organization Tips
+
+- **Use descriptive collections** - Create collections like "Articles to Read", "Documentation", "Tutorials"
+- **Tag with categories** - Assign relevant categories for better filtering
+- **Add notes** - Edit the description to add your own notes or context
+- **Regular cleanup** - Review and remove bookmarks you no longer need
+
+#### Quick Save Tips
+
+- **Keyboard shortcut** - Click the extension icon or use browser shortcut (if configured)
+- **Pre-select collections** - The extension remembers your last collection selection
+- **Check before saving** - The duplicate indicator helps avoid redundant saves
+- **Save early** - Bookmark pages as you find them, organize later
+
+#### Search Tips
+
+- **Search by domain** - Type the domain name to find all bookmarks from that site
+- **Search by title** - Use keywords from the page title
+- **Combine filters** - Use search + URL platform filter for precise results
+- **Use collections** - Organize by topic for easier retrieval
+
+### Troubleshooting URL Bookmarks
+
+#### Extension Issues
+
+**Save button not working:**
+
+- Check that you're logged in to the web app
+- Verify internet connection
+- Try refreshing the page and reopening the extension
+- Check browser console for errors
+
+**Metadata not extracted:**
+
+- Some sites block automated access
+- The system will use domain name as fallback
+- You can manually edit the title and description after saving
+
+**Duplicate not detected:**
+
+- URL normalization handles most variations
+- Slight URL differences (query parameters) may not be detected
+- Check your bookmarks manually if unsure
+
+#### Import Issues
+
+**URLs not validating:**
+
+- Ensure URLs start with http:// or https://
+- Remove any extra spaces or line breaks
+- Check for special characters that might break the URL
+
+**Import taking too long:**
+
+- Large batches (100+ URLs) may take several minutes
+- Keep the browser tab active during import
+- Consider splitting into smaller batches
+
+**Some URLs failed:**
+
+- Check error details in the import summary
+- Common issues: invalid URLs, timeout, access denied
+- Retry failed URLs after fixing issues
+
+### URL Bookmarks vs Social Bookmarks
+
+| Feature             | URL Bookmarks                | Social Bookmarks                  |
+| ------------------- | ---------------------------- | --------------------------------- |
+| **Source**          | Any web page                 | X (Twitter) or LinkedIn posts     |
+| **Content Saved**   | Title, description, metadata | Full post content, images, videos |
+| **Metadata**        | Extracted from page          | From social platform API          |
+| **Author Info**     | Domain name                  | Social profile (name, username)   |
+| **Quick Save**      | Extension popup              | Extension content script button   |
+| **Batch Import**    | URL list (web app)           | JSON export (crawler scripts)     |
+| **Duplicate Check** | By normalized URL            | By platform + post ID             |
+| **Offline Support** | Yes (queued locally)         | Yes (queued locally)              |
+| **Collections**     | Yes                          | Yes                               |
+| **Categories**      | Yes                          | Yes                               |
+| **Search**          | Title, description, domain   | Full post content, author, links  |
+
 ## Browsing and Searching
 
 ### Dashboard
@@ -167,6 +441,7 @@ Apply filters to narrow down your bookmarks:
 
   - X (Twitter)
   - LinkedIn
+  - URLs (Generic web pages)
   - All platforms
 
 - **Author** - Filter by who posted
@@ -620,6 +895,18 @@ A: There's no hard limit, but performance is optimized for up to 10,000 bookmark
 **Q: Can I save private posts?**
 A: Only posts you can see on the platform can be saved.
 
+**Q: Can I bookmark any website?**
+A: Yes! Use the quick save feature in the extension or batch import URLs in the web app.
+
+**Q: What if a website blocks metadata extraction?**
+A: The system will use the domain name as a fallback title. You can manually edit the title and description after saving.
+
+**Q: Can I save the same URL multiple times?**
+A: No, the system automatically detects duplicates and prevents saving the same URL twice.
+
+**Q: Do URL bookmarks work offline?**
+A: Yes, the extension queues bookmarks locally when offline and syncs them when connectivity is restored.
+
 ### Collections and Categories
 
 **Q: What's the difference between collections and categories?**
@@ -672,7 +959,17 @@ A: Not publicly available, but may be added for advanced users.
 
 ## Changelog
 
-### Version 1.0.0 (Current)
+### Version 1.1.0 (Current)
+
+- **URL Bookmarking** - Save any web page, not just social media posts
+- Quick save from browser extension with automatic metadata extraction
+- Batch import URLs from the web app
+- Duplicate detection for URL bookmarks
+- Offline support with local queue and automatic sync
+- Collection organization for URL bookmarks
+- Platform filter for URLs
+
+### Version 1.0.0
 
 - Initial release
 - X (Twitter) and LinkedIn support

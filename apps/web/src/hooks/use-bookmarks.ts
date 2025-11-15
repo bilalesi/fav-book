@@ -122,3 +122,42 @@ export function useBulkImportBookmarks() {
     },
   });
 }
+
+/**
+ * Hook to bulk delete bookmarks
+ */
+export function useBulkDeleteBookmarks() {
+  return useMutation({
+    mutationFn: (bookmarkIds: string[]) =>
+      client.bookmarks.bulkDelete({ bookmarkIds }),
+    onSuccess: (result) => {
+      // Invalidate bookmarks list and dashboard stats
+      queryClient.invalidateQueries({ queryKey: ["bookmarks", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      toast.success(`Deleted ${result.deletedCount} bookmark(s) successfully`);
+    },
+  });
+}
+
+/**
+ * Hook to bulk add bookmarks to collections
+ */
+export function useBulkAddToCollections() {
+  return useMutation({
+    mutationFn: ({
+      bookmarkIds,
+      collectionIds,
+    }: {
+      bookmarkIds: string[];
+      collectionIds: string[];
+    }) => client.bookmarks.bulkAddToCollections({ bookmarkIds, collectionIds }),
+    onSuccess: (result) => {
+      // Invalidate bookmarks list and collections
+      queryClient.invalidateQueries({ queryKey: ["bookmarks", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["collections"] });
+      toast.success(
+        `Added ${result.bookmarkCount} bookmark(s) to ${result.collectionCount} collection(s)`
+      );
+    },
+  });
+}

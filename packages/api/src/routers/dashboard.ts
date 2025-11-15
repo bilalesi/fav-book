@@ -79,6 +79,10 @@ export const dashboardRouter = {
       where: { userId, platform: "LINKEDIN" },
     });
 
+    const genericUrlCount = await prisma.bookmarkPost.count({
+      where: { userId, platform: "GENERIC_URL" },
+    });
+
     // Get recent bookmarks (5 most recent)
     const recentBookmarksData = await prisma.bookmarkPost.findMany({
       where: { userId },
@@ -159,6 +163,7 @@ export const dashboardRouter = {
       bookmarksByPlatform: {
         twitter: twitterCount,
         linkedin: linkedinCount,
+        genericUrl: genericUrlCount,
       },
       recentBookmarks: recentBookmarksData.map(transformBookmarkPost),
       mostViewed: mostViewedData.map(transformBookmarkPost),

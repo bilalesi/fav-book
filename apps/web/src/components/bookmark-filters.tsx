@@ -54,7 +54,9 @@ export function BookmarkFilters({
     filters.categoryIds && filters.categoryIds.length > 0,
   ].filter(Boolean).length;
 
-  const handlePlatformChange = (platform: "TWITTER" | "LINKEDIN" | null) => {
+  const handlePlatformChange = (
+    platform: "TWITTER" | "LINKEDIN" | "GENERIC_URL" | null
+  ) => {
     onFiltersChange({
       ...filters,
       platform: platform || undefined,
@@ -180,7 +182,9 @@ export function BookmarkFilters({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="w-full justify-between">
-                {filters.platform || "All Platforms"}
+                {filters.platform === "GENERIC_URL"
+                  ? "URLs"
+                  : filters.platform || "All Platforms"}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-48">
@@ -203,6 +207,12 @@ export function BookmarkFilters({
                 onCheckedChange={() => handlePlatformChange("LINKEDIN")}
               >
                 LinkedIn
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={filters.platform === "GENERIC_URL"}
+                onCheckedChange={() => handlePlatformChange("GENERIC_URL")}
+              >
+                URLs
               </DropdownMenuCheckboxItem>
             </DropdownMenuContent>
           </DropdownMenu>

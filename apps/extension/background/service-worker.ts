@@ -11,6 +11,11 @@ import {
   saveAuthState,
   clearAuthState,
   getApiUrl,
+  addToOfflineQueue,
+  getOfflineQueue,
+  removeFromOfflineQueue,
+  updateQueuedBookmarkRetryCount,
+  clearOldQueuedBookmarks,
 } from "../utils/storage";
 
 console.log("Social Bookmarks Manager: Background service worker loaded");
@@ -52,6 +57,15 @@ async function handleMessage(
 
     case "LOGOUT":
       return await handleLogout();
+
+    case "SAVE_URL_BOOKMARK":
+      return await saveUrlBookmark(message.data);
+
+    case "CHECK_URL_BOOKMARKED":
+      return await checkUrlBookmarked(message.data);
+
+    case "GET_COLLECTIONS":
+      return await getCollections();
 
     default:
       return {
@@ -177,6 +191,270 @@ async function handleLogout(): Promise<ExtensionResponse> {
   }
 }
 
+/**
+ * Save a URL bookmark to the backend API
+ * Requirements: 1.1, 1.2, 1.4, 1.5
+ */
+async function saveUrlBookmark(data: {
+  url: string;
+  title?: string;
+  description?: string;
+  collectionIds?: string[];
+  favicon?: string;
+}): Promise<ExtensionResponse> {
+  try {
+    const authState = await getAuthState();
+
+    if (!authState.isAuthenticated || !authState.token) {
+      return {
+        success: false,
+        error: "Not authenticated. Please log in to the extension.",
+      };
+    }
+
+    const apiUrl = await getApiUrl();
+
+    // Prepare metadata with favicon if provided
+    const metadata = data.favicon ? { favicon: data.favicon } : undefined;
+
+    // Call the backend API to create URL bookmark
+    const response = await fetch(`${apiUrl}/api/bookmarks.createUrlBookmark`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${authState.token}`,
+      },
+      body: JSON.stringify({
+        url: data.url,
+        title: data.title,
+        description: data.description,
+        collectionIds: data.collectionIds,
+        metadata,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    return {
+      success: true,
+      data: result,
+    };
+  } catch (error: any) {
+    console.error("Error saving URL bookmark:", error);
+
+    // If network error, queue for offline retry (Requirement 1.5)
+    if (
+      error.message.includes("fetch") ||
+      error.message.includes("network") ||
+      error.message.includes("Failed to fetch")
+    ) {
+      await addToOfflineQueue({
+        url: data.url,
+        title: data.title,
+        description: data.description,
+        favicon: data.favicon,
+        collectionIds: data.collectionIds,
+      });
+
+      return {
+        success: true,
+        data: {
+          queued: true,
+          message: "Saved locally. Will sync when online.",
+        },
+      };
+    }
+
+    return {
+      success: false,
+      error: error.message || "Failed to save URL bookmark",
+    };
+  }
+}
+
+/**
+ * Check if a URL is already bookmarked
+ * Requirements: 5.1
+ */
+async function checkUrlBookmarked(data: {
+  url: string;
+}): Promise<ExtensionResponse> {
+  try {
+    const authState = await getAuthState();
+
+    if (!authState.isAuthenticated || !authState.token) {
+      return {
+        success: false,
+        error: "Not authenticated",
+      };
+    }
+
+    const apiUrl = await getApiUrl();
+
+    // Call the backend API to check if URL is bookmarked
+    const response = await fetch(`${apiUrl}/api/bookmarks.checkUrlBookmarked`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${authState.token}`,
+      },
+      body: JSON.stringify({
+        url: data.url,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    return {
+      success: true,
+      data: result, // Will be null if not bookmarked, or the bookmark object if it exists
+    };
+  } catch (error: any) {
+    console.error("Error checking URL bookmark:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to check URL bookmark",
+    };
+  }
+}
+
+/**
+ * Get user's collections
+ * Requirements: 1.1, 1.2
+ */
+async function getCollections(): Promise<ExtensionResponse> {
+  try {
+    const authState = await getAuthState();
+
+    if (!authState.isAuthenticated || !authState.token) {
+      return {
+        success: false,
+        error: "Not authenticated",
+      };
+    }
+
+    const apiUrl = await getApiUrl();
+
+    // Call the backend API to get collections
+    const response = await fetch(`${apiUrl}/api/collections.list`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${authState.token}`,
+      },
+      body: JSON.stringify({}),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || `HTTP ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    return {
+      success: true,
+      data: result,
+    };
+  } catch (error: any) {
+    console.error("Error fetching collections:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to fetch collections",
+    };
+  }
+}
+
+/**
+ * Process offline queue with exponential backoff
+ * Requirements: 1.5
+ */
+async function processOfflineQueue(): Promise<void> {
+  const queue = await getOfflineQueue();
+
+  if (queue.length === 0) {
+    return;
+  }
+
+  console.log(`Processing ${queue.length} queued bookmarks`);
+
+  for (const bookmark of queue) {
+    // Skip if retry count exceeds 3
+    if (bookmark.retryCount >= 3) {
+      console.warn(`Skipping bookmark ${bookmark.id} - max retries exceeded`);
+      continue;
+    }
+
+    try {
+      const result = await saveUrlBookmark({
+        url: bookmark.url,
+        title: bookmark.title,
+        description: bookmark.description,
+        favicon: bookmark.favicon,
+        collectionIds: bookmark.collectionIds,
+      });
+
+      if (result.success && !result.data?.queued) {
+        // Successfully saved, remove from queue
+        await removeFromOfflineQueue(bookmark.id);
+        console.log(`Successfully synced bookmark ${bookmark.id}`);
+      } else if (!result.success) {
+        // Failed, increment retry count
+        await updateQueuedBookmarkRetryCount(
+          bookmark.id,
+          bookmark.retryCount + 1
+        );
+      }
+    } catch (error) {
+      console.error(`Error processing queued bookmark ${bookmark.id}:`, error);
+      // Increment retry count
+      await updateQueuedBookmarkRetryCount(
+        bookmark.id,
+        bookmark.retryCount + 1
+      );
+    }
+
+    // Add delay between retries (exponential backoff)
+    const delay = Math.min(1000 * Math.pow(2, bookmark.retryCount), 10000);
+    await new Promise((resolve) => setTimeout(resolve, delay));
+  }
+}
+
+/**
+ * Schedule offline queue processing
+ * Runs every 5 minutes and on network restoration
+ */
+function scheduleOfflineQueueProcessing() {
+  // Process queue every 5 minutes
+  setInterval(() => {
+    processOfflineQueue().catch((error) => {
+      console.error("Error processing offline queue:", error);
+    });
+  }, 5 * 60 * 1000);
+
+  // Clear old queued bookmarks daily
+  setInterval(() => {
+    clearOldQueuedBookmarks().catch((error) => {
+      console.error("Error clearing old queued bookmarks:", error);
+    });
+  }, 24 * 60 * 60 * 1000);
+
+  // Process queue when extension starts
+  processOfflineQueue().catch((error) => {
+    console.error("Error processing offline queue on startup:", error);
+  });
+}
+
 // Handle extension installation
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === "install") {
@@ -189,3 +467,6 @@ chrome.runtime.onInstalled.addListener((details) => {
     console.log("Extension updated");
   }
 });
+
+// Start offline queue processing
+scheduleOfflineQueueProcessing();

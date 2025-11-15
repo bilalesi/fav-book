@@ -2,8 +2,9 @@ import { getUser } from "@/functions/get-user";
 import { useDashboardStats } from "@/hooks/use-dashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { StatsCard } from "@/components/stats-card";
 import { createFileRoute, redirect, Link } from "@tanstack/react-router";
-import { Bookmark } from "lucide-react";
+import { Bookmark, Twitter, Linkedin, Link as LinkIcon } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard")({
   component: RouteComponent,
@@ -21,7 +22,7 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function RouteComponent() {
-  const { isLoading: statsLoading } = useDashboardStats();
+  const { data: stats, isLoading: statsLoading } = useDashboardStats();
 
   return (
     <div className="flex flex-col h-full">
@@ -63,14 +64,99 @@ function RouteComponent() {
       {/* Main content */}
       <div className="flex-1 overflow-auto p-6">
         <div className="max-w-7xl mx-auto space-y-8">
-          {/* Empty state or chart area */}
+          {/* Statistics Cards */}
           {statsLoading ? (
-            <div className="flex items-center justify-center h-96 border border-border bg-muted/20">
-              <div className="text-center space-y-4">
-                <Skeleton className="h-8 w-48 mx-auto" />
-                <Skeleton className="h-4 w-96 mx-auto" />
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Skeleton className="h-32" />
+              <Skeleton className="h-32" />
+              <Skeleton className="h-32" />
+              <Skeleton className="h-32" />
             </div>
+          ) : stats && stats.totalBookmarks > 0 ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatsCard
+                  title="Total Bookmarks"
+                  value={stats.totalBookmarks}
+                  icon={<Bookmark className="h-4 w-4" />}
+                  description="All saved bookmarks"
+                />
+                <StatsCard
+                  title="Twitter/X Posts"
+                  value={stats.bookmarksByPlatform.twitter}
+                  icon={<Twitter className="h-4 w-4" />}
+                  description="Saved from Twitter/X"
+                />
+                <StatsCard
+                  title="LinkedIn Posts"
+                  value={stats.bookmarksByPlatform.linkedin}
+                  icon={<Linkedin className="h-4 w-4" />}
+                  description="Saved from LinkedIn"
+                />
+                <StatsCard
+                  title="URL Bookmarks"
+                  value={stats.bookmarksByPlatform.genericUrl}
+                  icon={<LinkIcon className="h-4 w-4" />}
+                  description="Saved URLs"
+                />
+              </div>
+
+              {/* Recent Activity */}
+              {stats.recentBookmarks.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Recent Activity</h3>
+                  <div className="grid grid-cols-1 gap-4">
+                    {stats.recentBookmarks.slice(0, 5).map((bookmark) => (
+                      <div
+                        key={bookmark.id}
+                        className="border border-border p-4 hover:bg-muted/20 transition-colors"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              {bookmark.platform === "TWITTER" && (
+                                <Twitter className="h-4 w-4 text-muted-foreground" />
+                              )}
+                              {bookmark.platform === "LINKEDIN" && (
+                                <Linkedin className="h-4 w-4 text-muted-foreground" />
+                              )}
+                              {bookmark.platform === "GENERIC_URL" && (
+                                <LinkIcon className="h-4 w-4 text-muted-foreground" />
+                              )}
+                              <span className="text-sm font-medium">
+                                {bookmark.authorName}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                @{bookmark.authorUsername}
+                              </span>
+                            </div>
+                            <p className="text-sm line-clamp-2">
+                              {bookmark.content}
+                            </p>
+                            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                              <span>
+                                {new Date(
+                                  bookmark.savedAt
+                                ).toLocaleDateString()}
+                              </span>
+                              <span>{bookmark.viewCount} views</span>
+                            </div>
+                          </div>
+                          <Button asChild variant="ghost" size="sm">
+                            <Link
+                              to="/bookmarks/$id"
+                              params={{ id: bookmark.id }}
+                            >
+                              View
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <div className="flex flex-col items-center justify-center h-96 border border-border bg-muted/20">
               <Bookmark className="h-16 w-16 text-muted-foreground mb-4" />

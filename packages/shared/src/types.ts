@@ -1,5 +1,5 @@
 // Enums
-export type Platform = "TWITTER" | "LINKEDIN";
+export type Platform = "TWITTER" | "LINKEDIN" | "GENERIC_URL";
 export type MediaType = "IMAGE" | "VIDEO" | "LINK";
 
 // Core entities
@@ -93,6 +93,7 @@ export interface CreateMediaInput {
 export interface UpdateBookmarkInput {
   content?: string;
   metadata?: Record<string, any>;
+  collectionIds?: string[];
 }
 
 export interface CreateCollectionInput {
@@ -133,6 +134,7 @@ export interface DashboardStats {
   bookmarksByPlatform: {
     twitter: number;
     linkedin: number;
+    genericUrl: number;
   };
   recentBookmarks: BookmarkPost[];
   mostViewed: BookmarkPost[];
