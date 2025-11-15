@@ -1,0 +1,32 @@
+# Environment files
+.env
+.env.local
+.env.production
+
+# Docker volumes
+postgres-data/
+redis-data/
+registry-data/
+minio-data/
+webapp-data/
+shared-data/
+
+# Logs
+*.log
+logs/
+
+# Backup files
+*.sql
+*.tar.gz
+*.bak
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

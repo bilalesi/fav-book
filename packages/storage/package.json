@@ -1,0 +1,28 @@
+{
+    "name": "@my-better-t-app/storage",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./src/index.ts"
+        },
+        "./*": {
+            "types": "./dist/*.d.ts",
+            "default": "./src/*.ts"
+        }
+    },
+    "type": "module",
+    "scripts": {
+        "build": "tsdown"
+    },
+    "devDependencies": {
+        "tsdown": "catalog:"
+    },
+    "peerDependencies": {
+        "typescript": "^5"
+    },
+    "dependencies": {
+        "@aws-sdk/client-s3": "^3.709.0",
+        "@aws-sdk/s3-request-presigner": "^3.709.0",
+        "dotenv": "catalog:"
+    }
+}

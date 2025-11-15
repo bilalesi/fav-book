@@ -10,6 +10,21 @@ enum MediaType {
     LINK
 }
 
+enum ProcessingStatus {
+    PENDING
+    PROCESSING
+    COMPLETED
+    FAILED
+    PARTIAL_SUCCESS
+}
+
+enum DownloadStatus {
+    PENDING
+    DOWNLOADING
+    COMPLETED
+    FAILED
+}
+
 model BookmarkPost {
     id               String   @id @default(cuid())
     userId           String
@@ -25,15 +40,37 @@ model BookmarkPost {
     viewCount        Int      @default(0)
     metadata         Json?
 
-    user        User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-    media       Media[]
-    collections BookmarkPostCollection[]
-    categories  BookmarkPostCategory[]
+    user            User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    media           Media[]
+    collections     BookmarkPostCollection[]
+    categories      BookmarkPostCategory[]
+    enrichment      BookmarkEnrichment?
+    downloadedMedia DownloadedMedia[]
 
     @@unique([userId, platform, postId])
     @@index([userId, savedAt])
     @@index([platform])
     @@map("bookmark_post")
+}
+
+model BookmarkEnrichment {
+    id               String           @id @default(cuid())
+    bookmarkPostId   String           @unique
+    summary          String?          @db.Text
+    keywords         Json?
+    tags             Json?
+    processingStatus ProcessingStatus @default(PENDING)
+    workflowId       String?
+    errorMessage     String?          @db.Text
+    enrichedAt       DateTime?
+    createdAt        DateTime         @default(now())
+    updatedAt        DateTime         @updatedAt
+
+    bookmarkPost BookmarkPost @relation(fields: [bookmarkPostId], references: [id], onDelete: Cascade)
+
+    @@index([processingStatus])
+    @@index([enrichedAt])
+    @@map("bookmark_enrichment")
 }
 
 model Media {
@@ -48,6 +85,32 @@ model Media {
 
     @@index([bookmarkPostId])
     @@map("media")
+}
+
+model DownloadedMedia {
+    id             String         @id @default(cuid())
+    bookmarkPostId String
+    type           MediaType
+    originalUrl    String
+    storagePath    String
+    storageUrl     String?
+    fileSize       BigInt
+    duration       Int?
+    quality        String?
+    format         String?
+    width          Int?
+    height         Int?
+    downloadStatus DownloadStatus @default(PENDING)
+    errorMessage   String?        @db.Text
+    downloadedAt   DateTime?
+    createdAt      DateTime       @default(now())
+    metadata       Json?
+
+    bookmarkPost BookmarkPost @relation(fields: [bookmarkPostId], references: [id], onDelete: Cascade)
+
+    @@index([bookmarkPostId])
+    @@index([downloadStatus])
+    @@map("downloaded_media")
 }
 
 model Collection {
