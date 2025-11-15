@@ -1,0 +1,67 @@
+/* Styles for save button overlay and UI elements */
+
+.sbm-save-button {
+  position: absolute;
+  z-index: 9999;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+}
+
+.sbm-save-button:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.sbm-save-button:active {
+  transform: translateY(0);
+}
+
+.sbm-save-button.saving {
+  background: #6b7280;
+  cursor: wait;
+}
+
+.sbm-save-button.saved {
+  background: #10b981;
+}
+
+.sbm-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  max-width: 320px;
+  animation: slideIn 0.3s ease;
+}
+
+.sbm-notification.success {
+  border-left: 4px solid #10b981;
+}
+
+.sbm-notification.error {
+  border-left: 4px solid #ef4444;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}

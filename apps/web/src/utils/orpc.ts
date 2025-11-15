@@ -10,41 +10,83 @@ import { appRouter } from "@my-better-t-app/api/routers/index";
 import { createContext } from "@my-better-t-app/api/context";
 
 export const queryClient = new QueryClient({
-	queryCache: new QueryCache({
-		onError: (error) => {
-			toast.error(`Error: ${error.message}`, {
-				action: {
-					label: "retry",
-					onClick: () => {
-						queryClient.invalidateQueries();
-					},
-				},
-			});
-		},
-	}),
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error: any) => {
+        // Don't retry on 4xx errors (client errors)
+        if (error?.status >= 400 && error?.status < 500) {
+          return false;
+        }
+        // Retry up to 2 times for other errors
+        return failureCount < 2;
+      },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      staleTime: 5 * 60 * 1000, // 5 minutes - data is considered fresh
+      gcTime: 10 * 60 * 1000, // 10 minutes - cache garbage collection time
+      refetchOnWindowFocus: false,
+      refetchOnMount: false, // Don't refetch if data is fresh
+      refetchOnReconnect: true, // Refetch when reconnecting
+    },
+    mutations: {
+      retry: (failureCount, error: any) => {
+        // Don't retry on 4xx errors
+        if (error?.status >= 400 && error?.status < 500) {
+          return false;
+        }
+        // Retry once for network errors
+        return failureCount < 1;
+      },
+      retryDelay: 1000,
+      onError: (error: any) => {
+        const message = error?.message || "Failed to save changes";
+        toast.error(message, {
+          action: {
+            label: "Dismiss",
+            onClick: () => {},
+          },
+        });
+      },
+    },
+  },
+  queryCache: new QueryCache({
+    onError: (error: any, query) => {
+      // Only show toast for errors that aren't handled by components
+      if (query.state.data === undefined) {
+        const message = error?.message || "An error occurred";
+        toast.error(message, {
+          action: {
+            label: "Retry",
+            onClick: () => {
+              queryClient.invalidateQueries({ queryKey: query.queryKey });
+            },
+          },
+        });
+      }
+    },
+  }),
 });
 
 const getORPCClient = createIsomorphicFn()
-	.server(() =>
-		createRouterClient(appRouter, {
-			context: async ({ req }) => {
-				return createContext({ context: req });
-			},
-		}),
-	)
-	.client((): RouterClient<typeof appRouter> => {
-		const link = new RPCLink({
-			url: `${import.meta.env.VITE_SERVER_URL}/rpc`,
-			fetch(url, options) {
-				return fetch(url, {
-					...options,
-					credentials: "include",
-				});
-			},
-		});
+  .server(() =>
+    createRouterClient(appRouter, {
+      context: async ({ req }) => {
+        return createContext({ context: req });
+      },
+    })
+  )
+  .client((): RouterClient<typeof appRouter> => {
+    const link = new RPCLink({
+      url: `${import.meta.env.VITE_SERVER_URL}/rpc`,
+      fetch(url, options) {
+        return fetch(url, {
+          ...options,
+          credentials: "include",
+        });
+      },
+    });
 
-		return createORPCClient(link);
-	});
+    return createORPCClient(link);
+  });
 
 export const client: RouterClient<typeof appRouter> = getORPCClient();
 

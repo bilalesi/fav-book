@@ -24,13 +24,16 @@
       "@orpc/client": "^1.10.0",
       "@prisma/client": "^6.15.0",
       "@types/react": "~19.1.10",
-      "@types/react-dom": "^19.0.4"
+      "@types/react-dom": "^19.0.4",
+      "resend": "^4.0.1",
+      "react-email": "^3.0.3",
+      "@react-email/components": "^0.0.31"
     }
   },
   "scripts": {
     "check": "oxlint",
     "prepare": "husky",
-    "dev": "turbo dev",
+    "dev": "turbo dev --no-cache",
     "build": "turbo build",
     "check-types": "turbo check-types",
     "dev:native": "turbo -F native dev",
@@ -39,21 +42,28 @@
     "db:push": "turbo -F @my-better-t-app/db db:push",
     "db:studio": "turbo -F @my-better-t-app/db db:studio",
     "db:generate": "turbo -F @my-better-t-app/db db:generate",
-    "db:migrate": "turbo -F @my-better-t-app/db db:migrate"
+    "db:migrate": "turbo -F @my-better-t-app/db db:migrate",
+    "deploy:frontend": "./scripts/deployment/deploy-frontend.sh",
+    "deploy:backend": "./scripts/deployment/deploy-backend.sh",
+    "deploy:db": "./scripts/deployment/setup-database.sh",
+    "deploy:health": "./scripts/deployment/health-check.sh"
   },
   "dependencies": {
+    "better-auth": "^1.3.34",
     "dotenv": "^17.2.2",
     "zod": "^4.1.11"
   },
   "devDependencies": {
-    "turbo": "^2.5.4",
     "@biomejs/biome": "^2.2.0",
+    "@cloudflare/workers-types": "^4.20250822.0",
+    "@dotenvx/dotenvx": "^1.51.1",
+    "@types/bun": "^1.2.6",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.2",
     "oxlint": "^1.12.0",
+    "shadcn": "^3.5.0",
     "tsdown": "^0.15.5",
-    "@types/bun": "^1.2.6",
-    "@cloudflare/workers-types": "^4.20250822.0"
+    "turbo": "^2.5.4"
   },
   "lint-staged": {
     "**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,vue,astro,svelte}": "oxlint"

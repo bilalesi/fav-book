@@ -25,6 +25,7 @@ First, install the dependencies:
 ```bash
 bun install
 ```
+
 ## Database Setup
 
 This project uses PostgreSQL with Prisma.
@@ -33,10 +34,10 @@ This project uses PostgreSQL with Prisma.
 2. Update your `apps/server/.env` file with your PostgreSQL connection details.
 
 3. Generate the Prisma client and push the schema:
+
 ```bash
 bun run db:push
 ```
-
 
 Then, run the development server:
 
@@ -47,16 +48,38 @@ bun run dev
 Open [http://localhost:3001](http://localhost:3001) in your browser to see the web application.
 The API is running at [http://localhost:3000](http://localhost:3000).
 
+## Deployment
 
+### Quick Deployment
 
+```bash
+# Deploy frontend to Cloudflare Pages
+bun run deploy:frontend
 
+# Deploy backend to production server
+bun run deploy:backend
 
+# Setup production database
+bun run deploy:db
 
-## Deployment (Alchemy)
-- Web dev: cd apps/web && bun run dev
-- Web deploy: cd apps/web && bun run deploy
-- Web destroy: cd apps/web && bun run destroy
+# Health check
+bun run deploy:health
+```
 
+### Documentation
+
+- **[PRODUCTION_SETUP.md](./PRODUCTION_SETUP.md)** - Quick start guide
+- **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Comprehensive deployment guide
+- **[DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md)** - Step-by-step checklist
+- **[MONITORING.md](./MONITORING.md)** - Monitoring and observability
+
+### Deployment Options
+
+- **Frontend**: Cloudflare Pages via Alchemy
+- **Backend**: Self-hosted, Docker, or cloud platforms
+- **Database**: Neon PostgreSQL (managed)
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions.
 
 ## Project Structure
 

@@ -1,29 +1,40 @@
-import { Link } from "@tanstack/react-router";
 import UserMenu from "./user-menu";
+import { SearchBar } from "./search-bar";
+import { authClient } from "@/lib/auth-client";
+import { Button } from "./ui/button";
+import { Bell } from "lucide-react";
 
 export default function Header() {
-	const links = [
-		{ to: "/", label: "Home" },
-		{ to: "/dashboard", label: "Dashboard" },
-	] as const;
+  const { data: session } = authClient.useSession();
 
-	return (
-		<div>
-			<div className="flex flex-row items-center justify-between px-2 py-1">
-				<nav className="flex gap-4 text-lg">
-					{links.map(({ to, label }) => {
-						return (
-							<Link key={to} to={to}>
-								{label}
-							</Link>
-						);
-					})}
-				</nav>
-				<div className="flex items-center gap-2">
-					<UserMenu />
-				</div>
-			</div>
-			<hr />
-		</div>
-	);
+  if (!session) {
+    return null;
+  }
+
+  return (
+    <header className="border-b border-border bg-background" role="banner">
+      <div className="flex items-center justify-between px-6 py-3">
+        {/* Search bar */}
+        <div className="flex-1 max-w-md">
+          <div className="relative">
+            <SearchBar />
+            <kbd className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none inline-flex h-5 select-none items-center gap-1 border border-border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+              ⌘K
+            </kbd>
+          </div>
+        </div>
+
+        {/* Right side actions */}
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" className="text-muted-foreground">
+            Upgrade plan
+          </Button>
+          <Button variant="ghost" size="icon">
+            <Bell className="h-4 w-4" />
+          </Button>
+          <UserMenu />
+        </div>
+      </div>
+    </header>
+  );
 }

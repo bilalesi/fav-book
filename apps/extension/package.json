@@ -1,0 +1,23 @@
+{
+    "name": "@fav-book/extension",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "bun run build:clean && bun run build:copy && bun run build:bundle",
+        "build:clean": "rm -rf dist",
+        "build:copy": "mkdir -p dist/popup dist/icons dist/content && cp manifest.json dist/ && cp popup/popup.html popup/popup.css dist/popup/ && cp content/styles.css dist/content/ && cp -r icons/* dist/icons/ 2>/dev/null || true",
+        "build:bundle": "bun build background/service-worker.ts --outdir dist/background --target browser && bun build content/twitter.ts --outdir dist/content --target browser && bun build content/linkedin.ts --outdir dist/content --target browser && bun build popup/popup.ts --outdir dist/popup --target browser",
+        "dev": "bun run build",
+        "watch": "bun run build --watch",
+        "package": "bun run build && bun run package:zip",
+        "package:zip": "cd dist && zip -r ../social-bookmarks-manager-$(node -p \"require('../manifest.json').version\").zip . && cd ..",
+        "test:install": "bun run build && echo '\n✅ Build complete. Test installation:\n\nChrome: chrome://extensions/ -> Load unpacked -> select dist/\nFirefox: about:debugging -> Load Temporary Add-on -> select dist/manifest.json\n'"
+    },
+    "dependencies": {
+        "@my-better-t-app/shared": "workspace:*"
+    },
+    "devDependencies": {
+        "@types/chrome": "^0.0.268"
+    }
+}

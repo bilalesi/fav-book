@@ -1,0 +1,167 @@
+// Enums
+export type Platform = "TWITTER" | "LINKEDIN";
+export type MediaType = "IMAGE" | "VIDEO" | "LINK";
+
+// Core entities
+export interface BookmarkPost {
+  id: string;
+  userId: string;
+  platform: Platform;
+  postId: string;
+  postUrl: string;
+  content: string;
+  authorName: string;
+  authorUsername: string;
+  authorProfileUrl: string;
+  savedAt: Date;
+  createdAt: Date;
+  viewCount: number;
+  metadata?: Record<string, any>;
+  media?: Media[];
+  collections?: Collection[];
+  categories?: Category[];
+}
+
+export interface Media {
+  id: string;
+  bookmarkPostId: string;
+  type: MediaType;
+  url: string;
+  thumbnailUrl?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface Collection {
+  id: string;
+  userId: string;
+  name: string;
+  description?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  bookmarks?: BookmarkPost[];
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  userId?: string;
+  isSystem: boolean;
+  createdAt: Date;
+}
+
+// Filter and search types
+export interface BookmarkFilters {
+  platform?: Platform;
+  dateFrom?: Date;
+  dateTo?: Date;
+  authorUsername?: string;
+  categoryIds?: string[];
+  collectionId?: string;
+}
+
+export interface SearchFilters extends BookmarkFilters {
+  query: string;
+  sortBy?: "relevance" | "date" | "views";
+}
+
+export interface Pagination {
+  cursor?: string;
+  limit?: number;
+}
+
+// API input types
+export interface CreateBookmarkInput {
+  platform: Platform;
+  postId: string;
+  postUrl: string;
+  content: string;
+  authorName: string;
+  authorUsername: string;
+  authorProfileUrl: string;
+  createdAt: Date;
+  metadata?: Record<string, any>;
+  media?: CreateMediaInput[];
+}
+
+export interface CreateMediaInput {
+  type: MediaType;
+  url: string;
+  thumbnailUrl?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface UpdateBookmarkInput {
+  content?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface CreateCollectionInput {
+  name: string;
+  description?: string;
+}
+
+export interface UpdateCollectionInput {
+  name?: string;
+  description?: string;
+}
+
+// API output types
+export interface BookmarkListResponse {
+  bookmarks: BookmarkPost[];
+  nextCursor?: string;
+  total: number;
+}
+
+export interface SearchResponse {
+  results: BookmarkPost[];
+  nextCursor?: string;
+  total: number;
+}
+
+export interface BulkImportResponse {
+  successCount: number;
+  failureCount: number;
+  errors?: Array<{
+    index: number;
+    error: string;
+  }>;
+}
+
+// Dashboard types
+export interface DashboardStats {
+  totalBookmarks: number;
+  bookmarksByPlatform: {
+    twitter: number;
+    linkedin: number;
+  };
+  recentBookmarks: BookmarkPost[];
+  mostViewed: BookmarkPost[];
+  topicBreakdown: Array<{
+    categoryName: string;
+    count: number;
+  }>;
+}
+
+// Bulk import data format
+export interface BookmarkImportData {
+  postId: string;
+  postUrl: string;
+  content: string;
+  author: {
+    name: string;
+    username: string;
+    profileUrl: string;
+  };
+  media?: Array<{
+    type: MediaType;
+    url: string;
+    thumbnailUrl?: string;
+  }>;
+  timestamp: string;
+  metadata?: Record<string, any>;
+}
+
+export interface BulkImportInput {
+  platform: Platform;
+  bookmarks: BookmarkImportData[];
+}

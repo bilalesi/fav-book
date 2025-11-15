@@ -15,7 +15,9 @@
     "build": "tsdown"
   },
   "devDependencies": {
-    "tsdown": "catalog:"
+    "tsdown": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -24,6 +26,10 @@
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "zod": "catalog:",
-    "@my-better-t-app/db": "workspace:*"
+    "@my-better-t-app/db": "workspace:*",
+    "resend": "catalog:",
+    "react-email": "catalog:",
+    "@react-email/components": "catalog:",
+    "react": "catalog:"
   }
 }

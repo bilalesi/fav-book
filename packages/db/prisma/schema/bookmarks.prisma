@@ -1,0 +1,104 @@
+enum Platform {
+    TWITTER
+    LINKEDIN
+}
+
+enum MediaType {
+    IMAGE
+    VIDEO
+    LINK
+}
+
+model BookmarkPost {
+    id               String   @id @default(cuid())
+    userId           String
+    platform         Platform
+    postId           String
+    postUrl          String
+    content          String   @db.Text
+    authorName       String
+    authorUsername   String
+    authorProfileUrl String
+    savedAt          DateTime @default(now())
+    createdAt        DateTime
+    viewCount        Int      @default(0)
+    metadata         Json?
+
+    user        User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    media       Media[]
+    collections BookmarkPostCollection[]
+    categories  BookmarkPostCategory[]
+
+    @@unique([userId, platform, postId])
+    @@index([userId, savedAt])
+    @@index([platform])
+    @@map("bookmark_post")
+}
+
+model Media {
+    id             String    @id @default(cuid())
+    bookmarkPostId String
+    type           MediaType
+    url            String
+    thumbnailUrl   String?
+    metadata       Json?
+
+    bookmarkPost BookmarkPost @relation(fields: [bookmarkPostId], references: [id], onDelete: Cascade)
+
+    @@index([bookmarkPostId])
+    @@map("media")
+}
+
+model Collection {
+    id          String   @id @default(cuid())
+    userId      String
+    name        String
+    description String?  @db.Text
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    user      User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    bookmarks BookmarkPostCollection[]
+
+    @@index([userId])
+    @@map("collection")
+}
+
+model Category {
+    id        String   @id @default(cuid())
+    name      String
+    userId    String?
+    isSystem  Boolean  @default(false)
+    createdAt DateTime @default(now())
+
+    user      User?                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+    bookmarks BookmarkPostCategory[]
+
+    @@unique([name, userId])
+    @@index([userId])
+    @@map("category")
+}
+
+model BookmarkPostCollection {
+    bookmarkPostId String
+    collectionId   String
+    addedAt        DateTime @default(now())
+
+    bookmarkPost BookmarkPost @relation(fields: [bookmarkPostId], references: [id], onDelete: Cascade)
+    collection   Collection   @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+    @@id([bookmarkPostId, collectionId])
+    @@map("bookmark_post_collection")
+}
+
+model BookmarkPostCategory {
+    bookmarkPostId String
+    categoryId     String
+    assignedAt     DateTime @default(now())
+
+    bookmarkPost BookmarkPost @relation(fields: [bookmarkPostId], references: [id], onDelete: Cascade)
+    category     Category     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+    @@id([bookmarkPostId, categoryId])
+    @@map("bookmark_post_category")
+}

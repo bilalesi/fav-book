@@ -1,8 +1,9 @@
-import type { auth } from "@my-better-t-app/auth";
 import { createAuthClient } from "better-auth/react";
-import { inferAdditionalFields } from "better-auth/client/plugins";
+import { magicLinkClient, usernameClient } from "better-auth/client/plugins";
 
 export const authClient = createAuthClient({
-	baseURL: import.meta.env.VITE_SERVER_URL,
-	plugins: [inferAdditionalFields<typeof auth>()],
+  baseURL: import.meta.env.VITE_SERVER_URL || "http://localhost:3000",
+  plugins: [usernameClient(), magicLinkClient()],
 });
+
+export const { useSession, signIn, signOut } = authClient;
