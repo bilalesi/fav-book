@@ -8,22 +8,33 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { useCategoriesList } from "@/hooks/use-categories";
-import { Filter, X, Calendar } from "lucide-react";
+import { Filter, X, Calendar, ArrowUpDown } from "lucide-react";
 import type { BookmarkFilters } from "@my-better-t-app/shared";
 
 interface BookmarkFiltersProps {
   filters: BookmarkFilters;
   onFiltersChange: (filters: BookmarkFilters) => void;
   onClearFilters: () => void;
+  sortBy?: "savedAt" | "createdAt";
+  sortOrder?: "asc" | "desc";
+  onSortChange?: (
+    sortBy: "savedAt" | "createdAt",
+    sortOrder: "asc" | "desc"
+  ) => void;
 }
 
 export function BookmarkFilters({
   filters,
   onFiltersChange,
   onClearFilters,
+  sortBy = "savedAt",
+  sortOrder = "desc",
+  onSortChange,
 }: BookmarkFiltersProps) {
   const { data: categoriesData } = useCategoriesList();
   const categories = categoriesData || [];
@@ -111,7 +122,58 @@ export function BookmarkFilters({
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* Sort By Dropdown */}
+        {onSortChange && (
+          <div className="space-y-2">
+            <Label>Sort By</Label>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full justify-between">
+                  <span className="flex items-center gap-2">
+                    <ArrowUpDown className="h-4 w-4" />
+                    {sortBy === "createdAt" ? "Post Date" : "Saved Date"} (
+                    {sortOrder === "asc" ? "↑" : "↓"})
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                <DropdownMenuLabel>Sort Field</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioGroup
+                  value={sortBy}
+                  onValueChange={(value) =>
+                    onSortChange(value as "savedAt" | "createdAt", sortOrder)
+                  }
+                >
+                  <DropdownMenuRadioItem value="savedAt">
+                    Saved Date
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="createdAt">
+                    Post Date
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>Sort Order</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioGroup
+                  value={sortOrder}
+                  onValueChange={(value) =>
+                    onSortChange(sortBy, value as "asc" | "desc")
+                  }
+                >
+                  <DropdownMenuRadioItem value="desc">
+                    Newest First ↓
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="asc">
+                    Oldest First ↑
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+
         {/* Platform Filter */}
         <div className="space-y-2">
           <Label>Platform</Label>

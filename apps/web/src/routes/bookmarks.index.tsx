@@ -15,6 +15,8 @@ const bookmarksSearchSchema = z.object({
   dateTo: z.string().optional(),
   authorUsername: z.string().optional(),
   categoryIds: z.string().optional(), // Comma-separated IDs
+  sortBy: z.enum(["savedAt", "createdAt"]).optional(),
+  sortOrder: z.enum(["asc", "desc"]).optional(),
 });
 
 export const Route = createFileRoute("/bookmarks/")({
@@ -53,7 +55,15 @@ function BookmarksListPage() {
     return parsed;
   });
 
-  // Sync filters with URL on mount and when searchParams change
+  // Parse sorting from URL
+  const [sortBy, setSortBy] = useState<"savedAt" | "createdAt">(
+    searchParams.sortBy || "savedAt"
+  );
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">(
+    searchParams.sortOrder || "desc"
+  );
+
+  // Sync filters and sorting with URL on mount and when searchParams change
   useEffect(() => {
     const parsed: BookmarkFiltersType = {};
 
@@ -78,9 +88,11 @@ function BookmarksListPage() {
     }
 
     setFilters(parsed);
+    setSortBy(searchParams.sortBy || "savedAt");
+    setSortOrder(searchParams.sortOrder || "desc");
   }, [searchParams]);
 
-  // Fetch bookmarks with filters
+  // Fetch bookmarks with filters and sorting
   const {
     data,
     isLoading,
@@ -88,7 +100,7 @@ function BookmarksListPage() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useBookmarksList(filters, { limit: 20 });
+  } = useBookmarksList(filters, { limit: 20, sortBy, sortOrder });
 
   const bookmarks = data?.bookmarks || [];
 
@@ -148,6 +160,58 @@ function BookmarksListPage() {
       params.categoryIds = newFilters.categoryIds.join(",");
     }
 
+    // Preserve sorting params
+    if (sortBy !== "savedAt") {
+      params.sortBy = sortBy;
+    }
+    if (sortOrder !== "desc") {
+      params.sortOrder = sortOrder;
+    }
+
+    navigate({
+      search: params,
+      replace: true,
+    });
+  };
+
+  const handleSortChange = (
+    newSortBy: "savedAt" | "createdAt",
+    newSortOrder: "asc" | "desc"
+  ) => {
+    setSortBy(newSortBy);
+    setSortOrder(newSortOrder);
+
+    // Convert filters to URL params
+    const params: Record<string, string> = {};
+
+    if (filters.platform) {
+      params.platform = filters.platform;
+    }
+
+    if (filters.dateFrom) {
+      params.dateFrom = filters.dateFrom.toISOString().split("T")[0];
+    }
+
+    if (filters.dateTo) {
+      params.dateTo = filters.dateTo.toISOString().split("T")[0];
+    }
+
+    if (filters.authorUsername) {
+      params.authorUsername = filters.authorUsername;
+    }
+
+    if (filters.categoryIds && filters.categoryIds.length > 0) {
+      params.categoryIds = filters.categoryIds.join(",");
+    }
+
+    // Add sorting params
+    if (newSortBy !== "savedAt") {
+      params.sortBy = newSortBy;
+    }
+    if (newSortOrder !== "desc") {
+      params.sortOrder = newSortOrder;
+    }
+
     navigate({
       search: params,
       replace: true,
@@ -156,6 +220,8 @@ function BookmarksListPage() {
 
   const handleClearFilters = () => {
     setFilters({});
+    setSortBy("savedAt");
+    setSortOrder("desc");
     navigate({
       search: {},
       replace: true,
@@ -177,6 +243,9 @@ function BookmarksListPage() {
           filters={filters}
           onFiltersChange={handleFiltersChange}
           onClearFilters={handleClearFilters}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          onSortChange={handleSortChange}
         />
       </div>
 

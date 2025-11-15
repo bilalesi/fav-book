@@ -56,6 +56,8 @@ const bookmarkFiltersSchema = z.object({
 const paginationSchema = z.object({
   cursor: z.string().optional(),
   limit: z.number().int().positive().max(100).default(20),
+  sortBy: z.enum(["savedAt", "createdAt"]).default("savedAt"),
+  sortOrder: z.enum(["asc", "desc"]).default("desc"),
 });
 
 const bookmarkImportDataSchema = z.object({
@@ -202,7 +204,11 @@ export const bookmarksRouter = {
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
       const filters = input.filters || {};
-      const pagination = input.pagination || { limit: 20 };
+      const pagination = input.pagination || {
+        limit: 20,
+        sortBy: "savedAt" as const,
+        sortOrder: "desc" as const,
+      };
       const limit = pagination.limit;
 
       // Build where clause
@@ -258,7 +264,7 @@ export const bookmarksRouter = {
         where,
         take: limit + 1, // Fetch one extra to determine if there's a next page
         orderBy: {
-          savedAt: "desc",
+          [pagination.sortBy]: pagination.sortOrder,
         },
         include: {
           media: true,
@@ -425,7 +431,11 @@ export const bookmarksRouter = {
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
       const filters = input.filters || {};
-      const pagination = input.pagination || { limit: 20 };
+      const pagination = input.pagination || {
+        limit: 20,
+        sortBy: "savedAt" as const,
+        sortOrder: "desc" as const,
+      };
       const limit = pagination.limit;
 
       // Build base where clause with filters
