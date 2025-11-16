@@ -125,6 +125,13 @@ export interface BookmarkFilters {
   authorUsername?: string;
   categoryIds?: string[];
   collectionId?: string;
+  // New fields for enhanced filtering
+  platforms?: Platform[]; // Multiple platform filter
+  authorUsernameContains?: string; // Partial match on author
+  createdAtFrom?: Date; // Filter by post creation date
+  createdAtTo?: Date;
+  excludeCategoryIds?: string[]; // Exclude categories
+  contentSearch?: string; // Full-text search in content
 }
 
 export interface SearchFilters extends BookmarkFilters {

@@ -49,6 +49,13 @@ const bookmarkFiltersSchema = z.object({
   authorUsername: z.string().optional(),
   categoryIds: z.array(z.string()).optional(),
   collectionId: z.string().optional(),
+  // New fields for enhanced filtering
+  platforms: z.array(platformSchema).optional(),
+  authorUsernameContains: z.string().optional(),
+  createdAtFrom: z.coerce.date().optional(),
+  createdAtTo: z.coerce.date().optional(),
+  excludeCategoryIds: z.array(z.string()).optional(),
+  contentSearch: z.string().optional(),
 });
 
 const paginationSchema = z.object({
@@ -260,14 +267,32 @@ export const bookmarksRouter = {
         userId,
       };
 
+      // Handle platform filter (single platform)
       if (filters.platform) {
         where.platform = filters.platform;
       }
 
+      // Handle platforms filter (multiple platforms using OR)
+      if (filters.platforms && filters.platforms.length > 0) {
+        where.platform = {
+          in: filters.platforms,
+        };
+      }
+
+      // Handle exact author username match
       if (filters.authorUsername) {
         where.authorUsername = filters.authorUsername;
       }
 
+      // Handle author username contains (partial match)
+      if (filters.authorUsernameContains) {
+        where.authorUsername = {
+          contains: filters.authorUsernameContains,
+          mode: "insensitive",
+        };
+      }
+
+      // Handle savedAt date range filter
       if (filters.dateFrom || filters.dateTo) {
         where.savedAt = {};
         if (filters.dateFrom) {
@@ -275,6 +300,17 @@ export const bookmarksRouter = {
         }
         if (filters.dateTo) {
           where.savedAt.lte = filters.dateTo;
+        }
+      }
+
+      // Handle createdAt date range filter
+      if (filters.createdAtFrom || filters.createdAtTo) {
+        where.createdAt = {};
+        if (filters.createdAtFrom) {
+          where.createdAt.gte = filters.createdAtFrom;
+        }
+        if (filters.createdAtTo) {
+          where.createdAt.lte = filters.createdAtTo;
         }
       }
 
@@ -286,6 +322,7 @@ export const bookmarksRouter = {
         };
       }
 
+      // Handle category inclusion filter
       if (filters.categoryIds && filters.categoryIds.length > 0) {
         where.categories = {
           some: {
@@ -296,9 +333,60 @@ export const bookmarksRouter = {
         };
       }
 
+      // Handle category exclusion filter
+      if (filters.excludeCategoryIds && filters.excludeCategoryIds.length > 0) {
+        where.categories = {
+          none: {
+            categoryId: {
+              in: filters.excludeCategoryIds,
+            },
+          },
+        };
+      }
+
+      // Handle content search using full-text search
+      if (filters.contentSearch) {
+        // Prepare search terms for PostgreSQL full-text search
+        const searchTerms = filters.contentSearch
+          .trim()
+          .split(/\s+/)
+          .map((term) => `${term}:*`)
+          .join(" & ");
+
+        // Use raw SQL for full-text search
+        const searchResults = await prisma.$queryRawUnsafe<
+          Array<{ id: string }>
+        >(
+          `
+          SELECT id
+          FROM bookmark_post
+          WHERE "userId" = $1
+            AND to_tsvector('english', content || ' ' || "authorName") @@ to_tsquery('english', $2)
+          `,
+          userId,
+          searchTerms
+        );
+
+        // Add the matching IDs to the where clause
+        const matchingIds = searchResults.map((r) => r.id);
+        if (matchingIds.length > 0) {
+          where.id = {
+            in: matchingIds,
+          };
+        } else {
+          // No matches found, return empty result
+          return {
+            bookmarks: [],
+            nextCursor: undefined,
+            total: 0,
+          };
+        }
+      }
+
       // Add cursor pagination
       if (pagination.cursor) {
         where.id = {
+          ...(where.id as any),
           lt: pagination.cursor,
         };
       }
@@ -542,14 +630,32 @@ export const bookmarksRouter = {
         userId,
       };
 
+      // Handle platform filter (single platform)
       if (filters.platform) {
         where.platform = filters.platform;
       }
 
+      // Handle platforms filter (multiple platforms using OR)
+      if (filters.platforms && filters.platforms.length > 0) {
+        where.platform = {
+          in: filters.platforms,
+        };
+      }
+
+      // Handle exact author username match
       if (filters.authorUsername) {
         where.authorUsername = filters.authorUsername;
       }
 
+      // Handle author username contains (partial match)
+      if (filters.authorUsernameContains) {
+        where.authorUsername = {
+          contains: filters.authorUsernameContains,
+          mode: "insensitive",
+        };
+      }
+
+      // Handle savedAt date range filter
       if (filters.dateFrom || filters.dateTo) {
         where.savedAt = {};
         if (filters.dateFrom) {
@@ -557,6 +663,17 @@ export const bookmarksRouter = {
         }
         if (filters.dateTo) {
           where.savedAt.lte = filters.dateTo;
+        }
+      }
+
+      // Handle createdAt date range filter
+      if (filters.createdAtFrom || filters.createdAtTo) {
+        where.createdAt = {};
+        if (filters.createdAtFrom) {
+          where.createdAt.gte = filters.createdAtFrom;
+        }
+        if (filters.createdAtTo) {
+          where.createdAt.lte = filters.createdAtTo;
         }
       }
 
@@ -568,11 +685,23 @@ export const bookmarksRouter = {
         };
       }
 
+      // Handle category inclusion filter
       if (filters.categoryIds && filters.categoryIds.length > 0) {
         where.categories = {
           some: {
             categoryId: {
               in: filters.categoryIds,
+            },
+          },
+        };
+      }
+
+      // Handle category exclusion filter
+      if (filters.excludeCategoryIds && filters.excludeCategoryIds.length > 0) {
+        where.categories = {
+          none: {
+            categoryId: {
+              in: filters.excludeCategoryIds,
             },
           },
         };

@@ -98,6 +98,7 @@ export function BookmarkFilters({
 
   const formatDate = (date: Date | undefined) => {
     if (!date) return "";
+    if (date instanceof Date && isNaN(date.getTime())) return "";
     return date.toISOString().split("T")[0];
   };
 

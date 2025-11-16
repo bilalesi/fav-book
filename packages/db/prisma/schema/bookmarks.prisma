@@ -50,6 +50,8 @@ model BookmarkPost {
     @@unique([userId, platform, postId])
     @@index([userId, savedAt])
     @@index([platform])
+    @@index([authorUsername])
+    @@index([createdAt])
     @@map("bookmark_post")
 }
 

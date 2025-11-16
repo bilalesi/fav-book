@@ -68,6 +68,20 @@ bun run deploy:health
 
 ### Documentation
 
+#### User Documentation
+
+- **[USER_GUIDE.md](./docs/USER_GUIDE.md)** - Complete user guide
+- **[BOOKMARK_FILTERING.md](./docs/BOOKMARK_FILTERING.md)** - Advanced filtering and view modes
+- **[URL_IMPORT_GUIDE.md](./docs/URL_IMPORT_GUIDE.md)** - URL bookmarking guide
+- **[FAQ.md](./docs/FAQ.md)** - Frequently asked questions
+
+#### Developer Documentation
+
+- **[DEVELOPER_GUIDE_FILTERING.md](./docs/DEVELOPER_GUIDE_FILTERING.md)** - Filtering system architecture and API
+- **[API.md](./docs/API.md)** - API reference
+
+#### Deployment Documentation
+
 - **[PRODUCTION_SETUP.md](./PRODUCTION_SETUP.md)** - Quick start guide
 - **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Comprehensive deployment guide
 - **[DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md)** - Step-by-step checklist
@@ -104,3 +118,5 @@ my-better-t-app/
 - `bun run db:push`: Push schema changes to database
 - `bun run db:studio`: Open database studio UI
 - `bun run check`: Run Biome formatting and linting
+
+TRIGGER_PROJECT_ID=proj_crlbzttstobxcsaezyjf npx trigger.dev@latest dev -a http://localhost:8030 -c ../../packages/trigger/trigger.config.ts --env-file .env
