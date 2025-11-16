@@ -157,7 +157,7 @@ export function isRetryableError(error: Error | ErrorType | string): boolean {
     typeof error === "string" &&
     Object.values(ErrorType).includes(error as ErrorType)
   ) {
-    const retryableTypes = [
+    const retryableTypes: ErrorType[] = [
       ErrorType.NETWORK_ERROR,
       ErrorType.TIMEOUT,
       ErrorType.SERVICE_UNAVAILABLE,

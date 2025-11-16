@@ -1,4 +1,4 @@
-import { logger } from "@trigger.dev/sdk/v3";
+import { logger } from "@trigger.dev/sdk";
 import type { DownloadResult, MediaMetadata } from "../types";
 
 /**
@@ -22,7 +22,7 @@ export async function downloadMediaFile(
 
   try {
     // Import media downloader service
-    const { downloadMedia } = await import("@my-better-t-app/media-downloader");
+    const { downloadMedia } = await import("@favy/media-downloader");
 
     // Calculate max size in bytes
     const maxSizeBytes = maxSizeMB * 1024 * 1024;
@@ -116,9 +116,7 @@ export function enrichMediaMetadata(
  */
 export async function cleanupMediaFile(filePath: string): Promise<void> {
   try {
-    const { cleanupTempFile } = await import(
-      "@my-better-t-app/media-downloader"
-    );
+    const { cleanupTempFile } = await import("@favy/media-downloader");
     await cleanupTempFile(filePath);
     logger.info("Cleaned up temporary media file", { filePath });
   } catch (error) {

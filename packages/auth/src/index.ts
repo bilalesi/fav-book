@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import prisma from "@my-better-t-app/db";
+import prisma from "@favy/db";
 import { sendMagicLinkEmail } from "./email-service";
 
 export const auth = betterAuth({
@@ -14,7 +14,6 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
   secret: process.env.BETTER_AUTH_SECRET,
 
-  // Email and password authentication
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async ({ user, url }) => {

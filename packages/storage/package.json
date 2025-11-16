@@ -1,5 +1,5 @@
 {
-    "name": "@my-better-t-app/storage",
+    "name": "@favy/storage",
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",

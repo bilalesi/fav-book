@@ -1,4 +1,4 @@
-# @my-better-t-app/media-downloader
+# @favy/media-downloader
 
 Media downloader package that integrates with Cobalt API to detect and download video/audio content from social platforms and web pages.
 
@@ -13,7 +13,7 @@ Media downloader package that integrates with Cobalt API to detect and download 
 ## Installation
 
 ```bash
-bun add @my-better-t-app/media-downloader
+bun add @favy/media-downloader
 ```
 
 ## Configuration
@@ -31,7 +31,7 @@ COBALT_TIMEOUT=30000                  # Request timeout in ms
 ### Detect Media
 
 ```typescript
-import { detectMedia } from "@my-better-t-app/media-downloader";
+import { detectMedia } from "@favy/media-downloader";
 
 const result = await detectMedia("https://youtube.com/watch?v=...");
 
@@ -45,7 +45,7 @@ if (result.hasMedia) {
 ### Download Media
 
 ```typescript
-import { downloadMedia } from "@my-better-t-app/media-downloader";
+import { downloadMedia } from "@favy/media-downloader";
 
 const result = await downloadMedia("https://youtube.com/watch?v=...", {
   quality: "1080",
@@ -63,7 +63,7 @@ if (result.success) {
 ### Download Audio Only
 
 ```typescript
-import { downloadAudio } from "@my-better-t-app/media-downloader";
+import { downloadAudio } from "@favy/media-downloader";
 
 const result = await downloadAudio("https://youtube.com/watch?v=...", {
   audioFormat: "mp3",
@@ -73,7 +73,7 @@ const result = await downloadAudio("https://youtube.com/watch?v=...", {
 ### Safe Download with Cleanup
 
 ```typescript
-import { downloadMediaSafe } from "@my-better-t-app/media-downloader";
+import { downloadMediaSafe } from "@favy/media-downloader";
 
 // Automatically cleans up temp file on error
 const result = await downloadMediaSafe(url, options);
@@ -82,7 +82,7 @@ const result = await downloadMediaSafe(url, options);
 ### Check Download Support
 
 ```typescript
-import { isDownloadSupported } from "@my-better-t-app/media-downloader";
+import { isDownloadSupported } from "@favy/media-downloader";
 
 const supported = await isDownloadSupported(url);
 if (supported) {
@@ -93,7 +93,7 @@ if (supported) {
 ### Get Available Qualities
 
 ```typescript
-import { getAvailableQualities } from "@my-better-t-app/media-downloader";
+import { getAvailableQualities } from "@favy/media-downloader";
 
 const qualities = await getAvailableQualities(url);
 console.log("Available:", qualities); // ["1080p", "720p", "480p"]
@@ -121,7 +121,7 @@ import {
   downloadMedia,
   MediaDownloadError,
   MediaErrorCodes,
-} from "@my-better-t-app/media-downloader";
+} from "@favy/media-downloader";
 
 try {
   const result = await downloadMedia(url);

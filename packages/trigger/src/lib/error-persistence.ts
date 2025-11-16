@@ -3,10 +3,9 @@
  * Provides functions to log, retrieve, and manage error records
  */
 
-import { prisma } from "@my-better-t-app/db";
+import prisma from "@favy/db";
 import type { WorkflowError, WorkflowStep } from "../types";
 import { ErrorType } from "../types";
-import { classifyError, isRetryableError } from "./errors";
 
 /**
  * Persists a workflow error to the database

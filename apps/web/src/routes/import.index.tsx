@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { client } from "@/utils/orpc";
 import { toast } from "sonner";
-import type { BulkImportInput, Platform } from "@my-better-t-app/shared";
+import type { BulkImportInput, Platform } from "@favy/shared";
 
 export const Route = createFileRoute("/import/")({
   component: RouteComponent,

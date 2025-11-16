@@ -19,7 +19,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Loader from "@/components/loader";
-import type { BookmarkPost } from "@my-better-t-app/shared";
+import type { BookmarkPost } from "@favy/shared";
 
 interface ManageCategoriesDialogProps {
   bookmark: BookmarkPost;

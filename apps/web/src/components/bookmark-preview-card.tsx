@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { BookmarkPost } from "@my-better-t-app/shared";
+import type { BookmarkPost } from "@favy/shared";
 
 interface BookmarkPreviewCardProps {
   bookmark: BookmarkPost;

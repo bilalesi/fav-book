@@ -1,4 +1,4 @@
-# @my-better-t-app/ai
+# @favy/ai
 
 AI SDK integration package for bookmark enrichment using LM Studio.
 
@@ -42,7 +42,7 @@ LM_STUDIO_TEMPERATURE=0.7
 ### Basic Summarization
 
 ```typescript
-import { createSummarizationService } from "@my-better-t-app/ai";
+import { createSummarizationService } from "@favy/ai";
 
 const service = createSummarizationService();
 
@@ -73,7 +73,7 @@ const tags = await service.extractTags(content, 8);
 ### Validate Connection
 
 ```typescript
-import { validateLMStudioConnection } from "@my-better-t-app/ai";
+import { validateLMStudioConnection } from "@favy/ai";
 
 const isConnected = await validateLMStudioConnection();
 if (!isConnected) {
@@ -97,7 +97,7 @@ const service = createSummarizationService({
 The package provides error classification for retry logic:
 
 ```typescript
-import { isRetryableError, AIServiceError } from "@my-better-t-app/ai";
+import { isRetryableError, AIServiceError } from "@favy/ai";
 
 try {
   const result = await service.generateSummary(content);

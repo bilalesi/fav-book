@@ -2,7 +2,7 @@
 
 ## Overview
 
-Successfully implemented the S3 storage integration package (`@my-better-t-app/storage`) for managing file uploads, downloads, and deletions with S3-compatible storage (AWS S3 and MinIO).
+Successfully implemented the S3 storage integration package (`@favy/storage`) for managing file uploads, downloads, and deletions with S3-compatible storage (AWS S3 and MinIO).
 
 ## Completed Tasks
 
@@ -108,7 +108,7 @@ import {
   createS3ClientFromEnv,
   uploadFileFromPathWithGeneratedKey,
   loadStorageConfig,
-} from "@my-better-t-app/storage";
+} from "@favy/storage";
 
 // Initialize client
 const client = createS3ClientFromEnv();

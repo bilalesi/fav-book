@@ -1,4 +1,4 @@
-# @my-better-t-app/storage
+# @favy/storage
 
 S3-compatible storage integration package for managing file uploads, downloads, and deletions. Supports both AWS S3 and MinIO.
 
@@ -45,7 +45,7 @@ import {
   createS3ClientFromEnv,
   uploadFile,
   loadStorageConfig,
-} from "@my-better-t-app/storage";
+} from "@favy/storage";
 
 // Create client from environment variables
 const client = createS3ClientFromEnv();
@@ -73,7 +73,7 @@ import {
   createS3ClientFromEnv,
   uploadFileFromPath,
   loadStorageConfig,
-} from "@my-better-t-app/storage";
+} from "@favy/storage";
 
 const client = createS3ClientFromEnv();
 const config = loadStorageConfig();
@@ -96,7 +96,7 @@ import {
   createS3ClientFromEnv,
   uploadFileFromPathWithGeneratedKey,
   loadStorageConfig,
-} from "@my-better-t-app/storage";
+} from "@favy/storage";
 
 const client = createS3ClientFromEnv();
 const config = loadStorageConfig();
@@ -121,7 +121,7 @@ import {
   createS3ClientFromEnv,
   getFileUrl,
   loadStorageConfig,
-} from "@my-better-t-app/storage";
+} from "@favy/storage";
 
 const client = createS3ClientFromEnv();
 const config = loadStorageConfig();
@@ -149,7 +149,7 @@ import {
   createS3ClientFromEnv,
   deleteFile,
   loadStorageConfig,
-} from "@my-better-t-app/storage";
+} from "@favy/storage";
 
 const client = createS3ClientFromEnv();
 const config = loadStorageConfig();
@@ -167,7 +167,7 @@ console.log("Deleted:", success);
 ### Generate Storage Key
 
 ```typescript
-import { generateStorageKey } from "@my-better-t-app/storage";
+import { generateStorageKey } from "@favy/storage";
 
 // Generate unique storage key
 const key = generateStorageKey({
@@ -183,10 +183,7 @@ console.log("Generated key:", key);
 ### Validate Connection
 
 ```typescript
-import {
-  createS3ClientFromEnv,
-  validateS3Connection,
-} from "@my-better-t-app/storage";
+import { createS3ClientFromEnv, validateS3Connection } from "@favy/storage";
 
 const client = createS3ClientFromEnv();
 
@@ -203,7 +200,7 @@ try {
 All functions throw `StorageError` with specific error codes:
 
 ```typescript
-import { StorageError } from "@my-better-t-app/storage";
+import { StorageError } from "@favy/storage";
 
 try {
   await uploadFile(client, bucket, file, key);
@@ -232,7 +229,7 @@ try {
 ### Format File Size
 
 ```typescript
-import { formatFileSize } from "@my-better-t-app/storage";
+import { formatFileSize } from "@favy/storage";
 
 console.log(formatFileSize(1024)); // "1.00 KB"
 console.log(formatFileSize(1048576)); // "1.00 MB"
@@ -242,7 +239,7 @@ console.log(formatFileSize(1073741824)); // "1.00 GB"
 ### Extract File Extension
 
 ```typescript
-import { extractFileExtension } from "@my-better-t-app/storage";
+import { extractFileExtension } from "@favy/storage";
 
 console.log(extractFileExtension("video.mp4")); // "mp4"
 console.log(extractFileExtension("/path/to/file.jpg")); // "jpg"
@@ -276,7 +273,7 @@ import type {
   UploadResult,
   StorageConfig,
   StorageKeyOptions,
-} from "@my-better-t-app/storage";
+} from "@favy/storage";
 ```
 
 ## License

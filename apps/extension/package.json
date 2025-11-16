@@ -15,7 +15,7 @@
         "test:install": "bun run build && echo '\n✅ Build complete. Test installation:\n\nChrome: chrome://extensions/ -> Load unpacked -> select dist/\nFirefox: about:debugging -> Load Temporary Add-on -> select dist/manifest.json\n'"
     },
     "dependencies": {
-        "@my-better-t-app/shared": "workspace:*"
+        "@favy/shared": "workspace:*"
     },
     "devDependencies": {
         "@types/chrome": "^0.0.268"

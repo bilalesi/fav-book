@@ -14,8 +14,6 @@ import { DownloadedMediaPlayer } from "@/components/downloaded-media-player";
 import { RetryEnrichmentButton } from "@/components/retry-enrichment-button";
 import { EnrichmentErrorDetails } from "@/components/enrichment-error-details";
 import { useBookmarkStatus } from "@/hooks/use-bookmark-status";
-import { useQuery } from "@tanstack/react-query";
-import { client } from "@/utils/orpc";
 import { useState } from "react";
 import {
   Edit2Icon,
@@ -41,27 +39,10 @@ function BookmarkDetailPage() {
   const [collectionsDialogOpen, setCollectionsDialogOpen] = useState(false);
   const [categoriesDialogOpen, setCategoriesDialogOpen] = useState(false);
 
-  // Poll for enrichment status if bookmark is being processed
-  const { status: enrichmentStatus } = useBookmarkStatus({
+  const { status: enrichmentDetails } = useBookmarkStatus({
     bookmarkId: id,
     initialStatus: bookmark?.enrichment?.processingStatus,
     enabled: !!bookmark,
-  });
-
-  // Fetch detailed enrichment status with error information
-  const { data: enrichmentDetails } = useQuery({
-    queryKey: ["bookmarks", "enrichment-status", id],
-    queryFn: async () => {
-      return await client.bookmarks.getEnrichmentStatus({ id });
-    },
-    enabled: !!bookmark && !!bookmark.enrichment,
-    refetchInterval: (data) => {
-      // Poll every 10 seconds if processing
-      if (data?.processingStatus === "PROCESSING") {
-        return 10000;
-      }
-      return false;
-    },
   });
 
   if (isLoading) {
@@ -167,7 +148,7 @@ function BookmarkDetailPage() {
                   {bookmark.platform === "TWITTER" ? "X (Twitter)" : "LinkedIn"}
                 </Badge>
                 {bookmark.enrichment && (
-                  <BookmarkStatusBadge status={enrichmentStatus} />
+                  <BookmarkStatusBadge status={enrichmentDetails} />
                 )}
               </div>
               <CardTitle className="text-2xl mb-2">
@@ -198,7 +179,7 @@ function BookmarkDetailPage() {
           {/* AI Summary Section */}
           {bookmark.enrichment && (
             <div className="space-y-4">
-              {enrichmentStatus === "COMPLETED" && (
+              {enrichmentDetails === "COMPLETED" && (
                 <BookmarkSummary
                   summary={bookmark.enrichment.summary}
                   keywords={bookmark.enrichment.keywords}
@@ -206,17 +187,17 @@ function BookmarkDetailPage() {
                 />
               )}
 
-              {(enrichmentStatus === "FAILED" ||
-                enrichmentStatus === "PARTIAL_SUCCESS") &&
-                enrichmentDetails?.hasErrors && (
+              {/* {(enrichmentDetails === "FAILED" ||
+                enrichmentDetails === "PARTIAL_SUCCESS") &&
+                enrichmentDetails && (
                   <EnrichmentErrorDetails
-                    errors={enrichmentDetails.errors || []}
+                    errors={enrichmentDetails || []}
                     bookmarkId={bookmark.id}
-                    processingStatus={enrichmentStatus}
+                    processingStatus={enrichmentDetails}
                   />
-                )}
+                )} */}
 
-              {enrichmentStatus === "PARTIAL_SUCCESS" &&
+              {enrichmentDetails === "PARTIAL_SUCCESS" &&
                 bookmark.enrichment.summary && (
                   <BookmarkSummary
                     summary={bookmark.enrichment.summary}

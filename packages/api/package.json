@@ -1,5 +1,5 @@
 {
-  "name": "@my-better-t-app/api",
+  "name": "@favy/api",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -21,17 +21,18 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@orpc/server": "catalog:",
+    "@favy/auth": "workspace:*",
+    "@favy/db": "workspace:*",
+    "@favy/shared": "workspace:*",
+    "@favy/trigger": "workspace:*",
     "@orpc/client": "catalog:",
     "@orpc/openapi": "catalog:",
+    "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
-    "elysia": "catalog:",
+    "@prisma/client": "^6.19.0",
+    "@trigger.dev/sdk": "4.1.0",
     "dotenv": "catalog:",
-    "zod": "catalog:",
-    "@my-better-t-app/auth": "workspace:*",
-    "@my-better-t-app/db": "workspace:*",
-    "@my-better-t-app/shared": "workspace:*",
-    "@my-better-t-app/trigger": "workspace:*",
-    "@trigger.dev/sdk": "4.1.0"
+    "elysia": "catalog:",
+    "zod": "catalog:"
   }
 }

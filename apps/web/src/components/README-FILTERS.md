@@ -113,7 +113,7 @@ All filters use AND logic as specified in requirements 7.1-7.5.
 
 ## Dependencies Added
 
-- Added `@my-better-t-app/shared` to web app dependencies for type imports
+- Added `@favy/shared` to web app dependencies for type imports
 
 ## Notes
 

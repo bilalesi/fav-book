@@ -1,19 +1,16 @@
 import { protectedProcedure } from "../index";
 import { z } from "zod";
-import prisma, { Prisma } from "@my-better-t-app/db";
-import type {
-  BookmarkPost,
-  BookmarkListResponse,
-} from "@my-better-t-app/shared";
+import prisma, { Prisma } from "@favy/db";
+import type { BookmarkListResponse } from "@favy/shared";
 import { validateAndNormalizeUrl } from "../lib/url-normalizer";
 import { extractMetadata } from "../lib/metadata-extractor";
 import { tasks } from "@trigger.dev/sdk/v3";
-import type { BookmarkEnrichmentInput } from "@my-better-t-app/trigger";
-
+import type { BookmarkEnrichmentInput } from "@favy/trigger";
+import { isEnrichmentEnabled, isMediaDownloadEnabled } from "../lib/utils";
+import { Prisma as PrismaType } from "@prisma/client";
 const platformSchema = z.enum(["TWITTER", "LINKEDIN", "GENERIC_URL"]);
 const mediaTypeSchema = z.enum(["IMAGE", "VIDEO", "LINK"]);
 
-// Input media type schema - accepts both lowercase and uppercase, then transforms to uppercase
 const mediaTypeInputSchema = z
   .string()
   .transform((val) => val.toUpperCase())
@@ -21,19 +18,19 @@ const mediaTypeInputSchema = z
 
 const createMediaSchema = z.object({
   type: mediaTypeSchema,
-  url: z.string().url("Invalid media URL"),
-  thumbnailUrl: z.string().url("Invalid thumbnail URL").optional(),
+  url: z.url("Invalid media URL"),
+  thumbnailUrl: z.url("Invalid thumbnail URL").optional(),
   metadata: z.record(z.string(), z.any()).optional(),
 });
 
 const createBookmarkSchema = z.object({
   platform: platformSchema,
   postId: z.string().min(1),
-  postUrl: z.string().url(),
+  postUrl: z.url(),
   content: z.string(),
   authorName: z.string().min(1),
   authorUsername: z.string().min(1),
-  authorProfileUrl: z.string().url(),
+  authorProfileUrl: z.url(),
   createdAt: z.coerce.date(),
   metadata: z.record(z.string(), z.any()).optional(),
   media: z.array(createMediaSchema).optional(),
@@ -63,7 +60,7 @@ const paginationSchema = z.object({
 
 const bookmarkImportDataSchema = z.object({
   postId: z.string().min(1, "Post ID is required"),
-  postUrl: z.string().url("Invalid post URL"),
+  postUrl: z.url("Invalid post URL"),
   content: z.string(), // Allow empty string for posts without text content
   author: z.object({
     name: z.string().min(1, "Author name is required"),
@@ -87,19 +84,6 @@ const bulkImportSchema = z.object({
   platform: platformSchema,
   bookmarks: z.array(bookmarkImportDataSchema),
 });
-
-// Helper function to check if enrichment is enabled
-function isEnrichmentEnabled(): boolean {
-  return (
-    process.env.ENABLE_AI_SUMMARIZATION === "true" ||
-    process.env.ENABLE_MEDIA_DOWNLOAD === "true"
-  );
-}
-
-// Helper function to check if media download is enabled
-function isMediaDownloadEnabled(): boolean {
-  return process.env.ENABLE_MEDIA_DOWNLOAD === "true";
-}
 
 // Helper function to spawn enrichment workflow
 async function spawnEnrichmentWorkflow(
@@ -146,64 +130,28 @@ async function spawnEnrichmentWorkflow(
   }
 }
 
-// Type for bookmark with all includes
-type BookmarkWithIncludes = Prisma.BookmarkPostGetPayload<{
-  include: {
-    media: true;
-    collections: {
-      include: {
-        collection: true;
+export type GetBookmarkPost = PrismaType.Result<
+  typeof prisma.bookmarkPost,
+  {
+    include: {
+      media: true;
+      collections: {
+        include: {
+          collection: true;
+        };
       };
-    };
-    categories: {
-      include: {
-        category: true;
+      categories: {
+        include: {
+          category: true;
+        };
       };
+      enrichment: true;
     };
-  };
-}>;
-
-// Helper function to transform Prisma result to BookmarkPost
-function transformBookmarkPost(bookmark: BookmarkWithIncludes): BookmarkPost {
-  return {
-    id: bookmark.id,
-    userId: bookmark.userId,
-    platform: bookmark.platform,
-    postId: bookmark.postId,
-    postUrl: bookmark.postUrl,
-    content: bookmark.content,
-    authorName: bookmark.authorName,
-    authorUsername: bookmark.authorUsername,
-    authorProfileUrl: bookmark.authorProfileUrl,
-    savedAt: bookmark.savedAt,
-    createdAt: bookmark.createdAt,
-    viewCount: bookmark.viewCount,
-    metadata: bookmark.metadata as Record<string, unknown> | undefined,
-    media: bookmark.media?.map((m) => ({
-      id: m.id,
-      bookmarkPostId: m.bookmarkPostId,
-      type: m.type,
-      url: m.url,
-      thumbnailUrl: m.thumbnailUrl ?? undefined,
-      metadata: m.metadata as Record<string, unknown> | undefined,
-    })),
-    collections: bookmark.collections?.map((bc) => ({
-      id: bc.collection.id,
-      userId: bc.collection.userId,
-      name: bc.collection.name,
-      description: bc.collection.description ?? undefined,
-      createdAt: bc.collection.createdAt,
-      updatedAt: bc.collection.updatedAt,
-    })),
-    categories: bookmark.categories?.map((bc) => ({
-      id: bc.category.id,
-      name: bc.category.name,
-      userId: bc.category.userId ?? undefined,
-      isSystem: bc.category.isSystem,
-      createdAt: bc.category.createdAt,
-    })),
-  };
-}
+  },
+  "findFirst"
+> & {
+  viewCount: number;
+};
 
 export const bookmarksRouter = {
   // Create a new bookmark
@@ -286,7 +234,7 @@ export const bookmarksRouter = {
         });
       }
 
-      return transformBookmarkPost(bookmark);
+      return bookmark;
     }),
 
   // List bookmarks with pagination and filtering
@@ -385,8 +333,8 @@ export const bookmarksRouter = {
       const items = hasMore ? bookmarks.slice(0, limit) : bookmarks;
       const nextCursor = hasMore ? items[items.length - 1]?.id : undefined;
 
-      const response: BookmarkListResponse = {
-        bookmarks: items.map(transformBookmarkPost),
+      const response = {
+        bookmarks,
         nextCursor,
         total,
       };
@@ -417,6 +365,7 @@ export const bookmarksRouter = {
               category: true,
             },
           },
+          enrichment: true,
         },
       });
 
@@ -434,10 +383,10 @@ export const bookmarksRouter = {
         },
       });
 
-      return transformBookmarkPost({
+      return {
         ...bookmark,
         viewCount: bookmark.viewCount + 1,
-      });
+      };
     }),
 
   // Update a bookmark
@@ -539,7 +488,7 @@ export const bookmarksRouter = {
         },
       });
 
-      return transformBookmarkPost(bookmark);
+      return bookmark;
     }),
 
   // Delete a bookmark
@@ -844,7 +793,7 @@ export const bookmarksRouter = {
         : undefined;
 
       return {
-        results: orderedBookmarks.map(transformBookmarkPost),
+        results: orderedBookmarks,
         nextCursor,
         total,
       };
@@ -1214,7 +1163,7 @@ export const bookmarksRouter = {
           });
         }
 
-        const result = transformBookmarkPost(bookmark);
+        const result = bookmark;
 
         // Add warning flag if metadata extraction failed
         if (metadataExtractionFailed) {
@@ -1292,7 +1241,7 @@ export const bookmarksRouter = {
       });
 
       // Return bookmark if exists, null otherwise
-      return bookmark ? transformBookmarkPost(bookmark) : null;
+      return bookmark ?? null;
     }),
 
   // Bulk delete bookmarks

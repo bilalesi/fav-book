@@ -1,5 +1,5 @@
 import { metricsTracker } from "./metrics-tracker";
-import prisma from "@my-better-t-app/db";
+import prisma from "@favy/db";
 
 /**
  * Alert severity levels

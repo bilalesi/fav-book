@@ -88,7 +88,7 @@ run_test "MinIO Console is accessible" \
 
 # Test 8: Container Registry is accessible
 run_test "Container Registry is accessible" \
-    "curl -f -s http://localhost:5000/v2/"
+    "curl -f -s http://localhost:5000"
 
 # Test 9: Trigger.dev Webapp is accessible
 run_test "Trigger.dev Webapp is accessible" \

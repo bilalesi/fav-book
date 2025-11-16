@@ -10,7 +10,6 @@ import viteReact from "@vitejs/plugin-react";
 import alchemy from "alchemy/cloudflare/tanstack-start";
 
 export default defineConfig((props: UserConfig) => {
-  console.log("–– – mode––", props.mode);
   const isTest = props.mode === "test" || process.env.VITEST === "true";
 
   return {
@@ -36,14 +35,9 @@ export default defineConfig((props: UserConfig) => {
           },
         },
       },
-      minify: "terser" as BuildEnvironmentOptions["minify"],
+      minify: "esbuild" as BuildEnvironmentOptions["minify"],
       // Increase chunk size warning limit
       chunkSizeWarningLimit: 1000,
-      terserOptions: {
-        compress: {
-          drop_console: props.mode === "production",
-        },
-      } as BuildEnvironmentOptions["terserOptions"],
     },
     test: {
       globals: true,

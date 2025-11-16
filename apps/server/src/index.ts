@@ -11,8 +11,8 @@ import {
   ValidationError as ORPCValidationError,
 } from "@orpc/server";
 import { z } from "zod";
-import { appRouter } from "@my-better-t-app/api/routers/index";
-import { createContext } from "@my-better-t-app/api/context";
+import { appRouter } from "@favy/api/routers/index";
+import { createContext } from "@favy/api/context";
 import { authRoutes } from "./routes/auth";
 import { validateSession } from "./middleware/auth";
 import {

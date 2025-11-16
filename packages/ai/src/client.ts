@@ -1,4 +1,7 @@
-import { createOpenAI } from "@ai-sdk/openai";
+import {
+  createOpenAICompatible,
+  OpenAICompatibleChatLanguageModel,
+} from "@ai-sdk/openai-compatible";
 import type { LMStudioConfig, AIServiceError } from "./types";
 
 /**
@@ -22,10 +25,26 @@ export function createLMStudioClient(config?: Partial<LMStudioConfig>) {
     ...config,
   };
 
-  return createOpenAI({
-    baseURL: fullConfig.apiUrl,
-    apiKey: "not-needed", // LM Studio doesn't require API key
-  });
+  // const model = createOpenAICompatible({
+  //   name: "lmstudio",
+  //   baseURL: fullConfig.apiUrl,
+  // }).chatModel(process.env.LM_STUDIO_MODEL || "llama-3.2-3b-instruct");
+  const model = new OpenAICompatibleChatLanguageModel(
+    process.env.LM_STUDIO_MODEL || "llama-3.2-3b-instruct",
+    {
+      // <-- Second parameter, not third
+      provider: `lmstudio.chat`,
+      url: ({ path }) => {
+        const url = new URL(`${fullConfig.apiUrl}${path}`);
+        return url.toString();
+      },
+      headers: () => ({}),
+      supportsStructuredOutputs: true,
+      // 'defaultObjectGenerationMode' doesn't seem to be a valid option anymore
+    }
+  );
+
+  return model;
 }
 
 /**
@@ -56,18 +75,20 @@ export async function validateLMStudioConnection(
       return false;
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as {
+      data?: Array<{ id: string }>;
+    };
 
     // Check if the configured model is available
     if (data.data && Array.isArray(data.data)) {
       const modelExists = data.data.some(
-        (model: { id: string }) => model.id === fullConfig.model
+        (model) => model.id === fullConfig.model
       );
 
       if (!modelExists) {
         console.warn(
           `Configured model "${fullConfig.model}" not found in LM Studio. Available models:`,
-          data.data.map((m: { id: string }) => m.id)
+          data.data.map((m) => m.id)
         );
       }
     }

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { BookmarkPost } from "@my-better-t-app/shared";
+import type { BookmarkPost } from "@favy/shared";
 import { Eye } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { queryClient, client } from "@/utils/orpc";

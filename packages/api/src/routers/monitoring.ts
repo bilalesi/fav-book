@@ -1,15 +1,9 @@
 import { z } from "zod";
 import { protectedProcedure, publicProcedure } from "../index";
-import prisma from "@my-better-t-app/db";
-import {
-  getMetrics,
-  getMetricsJSON,
-} from "@my-better-t-app/trigger/lib/metrics";
-import { metricsTracker } from "@my-better-t-app/trigger/lib/metrics-tracker";
-import {
-  testAlert,
-  evaluateAllAlerts,
-} from "@my-better-t-app/trigger/lib/alerting";
+import prisma from "@favy/db";
+import { getMetrics, getMetricsJSON } from "@favy/trigger/lib/metrics";
+import { metricsTracker } from "@favy/trigger/lib/metrics-tracker";
+import { testAlert, evaluateAllAlerts } from "@favy/trigger/lib/alerting";
 
 /**
  * Monitoring API router

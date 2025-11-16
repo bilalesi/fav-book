@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { DownloadedMedia } from "@my-better-t-app/shared";
+import type { DownloadedMedia } from "@favy/shared";
 import { Loader2, XCircle, Download, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 

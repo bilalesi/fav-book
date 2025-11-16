@@ -1,4 +1,4 @@
-import type { BookmarkPost } from "@my-better-t-app/shared";
+import type { BookmarkPost } from "@favy/shared";
 import { BookmarkCardTwitter } from "./bookmark-card-twitter";
 import { BookmarkCardLinkedIn } from "./bookmark-card-linkedin";
 import { BookmarkCardUrl } from "./bookmark-card-url";

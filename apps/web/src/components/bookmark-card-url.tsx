@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import type { BookmarkPost } from "@my-better-t-app/shared";
+import type { BookmarkPost } from "@favy/shared";
 import { ExternalLink, Globe, Pencil, Trash2 } from "lucide-react";
 import { BookmarkCardBase } from "./bookmark-card-base";
 import { Button } from "@/components/ui/button";

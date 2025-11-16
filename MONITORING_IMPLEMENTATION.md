@@ -267,7 +267,7 @@ curl http://localhost:3000/api/monitoring/dashboard
 The alert monitoring loop can be started in your application:
 
 ```typescript
-import { startAlertMonitoring } from "@my-better-t-app/trigger/lib/alerting";
+import { startAlertMonitoring } from "@favy/trigger/lib/alerting";
 
 // Start monitoring (checks every minute)
 const interval = startAlertMonitoring(1);

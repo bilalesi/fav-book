@@ -1,5 +1,5 @@
 {
-    "name": "@my-better-t-app/trigger",
+    "name": "@favy/trigger",
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
@@ -22,11 +22,11 @@
         "typescript": "^5"
     },
     "dependencies": {
-        "@my-better-t-app/ai": "workspace:*",
-        "@my-better-t-app/db": "workspace:*",
-        "@my-better-t-app/media-downloader": "workspace:*",
-        "@my-better-t-app/shared": "workspace:*",
-        "@my-better-t-app/storage": "workspace:*",
+        "@favy/ai": "workspace:*",
+        "@favy/db": "workspace:*",
+        "@favy/media-downloader": "workspace:*",
+        "@favy/shared": "workspace:*",
+        "@favy/storage": "workspace:*",
         "@trigger.dev/sdk": "4.1.0",
         "dotenv": "catalog:",
         "prom-client": "^15.1.0",

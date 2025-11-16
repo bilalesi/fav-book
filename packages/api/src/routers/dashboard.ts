@@ -1,7 +1,7 @@
 import { protectedProcedure } from "../index";
 import { z } from "zod";
-import prisma from "@my-better-t-app/db";
-import type { DashboardStats, BookmarkPost } from "@my-better-t-app/shared";
+import prisma from "@favy/db";
+import type { DashboardStats, BookmarkPost } from "@favy/shared";
 
 // Helper function to transform Prisma result to BookmarkPost
 function transformBookmarkPost(bookmark: any): BookmarkPost {

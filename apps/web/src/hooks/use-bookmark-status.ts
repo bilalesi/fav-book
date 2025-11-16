@@ -1,7 +1,28 @@
-import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { client } from "@/utils/orpc";
-import type { ProcessingStatus } from "@my-better-t-app/shared";
+import type { DownloadStatus, MediaType, ProcessingStatus } from "@favy/shared";
+
+type EnrichedBookmark = {
+  bookmarkId: string;
+  processingStatus: ProcessingStatus;
+  workflowId: string | null | undefined;
+  summary: string | null | undefined;
+  keywords: string[] | undefined;
+  tags: string[] | undefined;
+  enrichedAt: Date | null | undefined;
+  errorMessage: string | null | undefined;
+  downloadedMedia: {
+    id: string;
+    type: MediaType;
+    downloadStatus: DownloadStatus;
+    storageUrl: string | null;
+    fileSize: string;
+    duration: number | null;
+    quality: string | null;
+    format: string | null;
+    errorMessage: string | null;
+  }[];
+};
 
 interface UseBookmarkStatusOptions {
   bookmarkId: string;
@@ -12,6 +33,7 @@ interface UseBookmarkStatusOptions {
 
 interface BookmarkStatusResult {
   status: ProcessingStatus;
+  data?: EnrichedBookmark | null;
   isPolling: boolean;
   refetch: () => void;
 }
@@ -25,12 +47,7 @@ export function useBookmarkStatus({
   bookmarkId,
   initialStatus,
   enabled = true,
-  pollingInterval = 10000, // 10 seconds
 }: UseBookmarkStatusOptions): BookmarkStatusResult {
-  const [status, setStatus] = useState<ProcessingStatus>(
-    initialStatus || "PENDING"
-  );
-
   // Determine if we should poll based on current status
   const shouldPoll =
     enabled && (status === "PROCESSING" || status === "PENDING");
@@ -40,29 +57,31 @@ export function useBookmarkStatus({
     queryKey: ["bookmarks", "enrichment-status", bookmarkId],
     queryFn: async () => {
       try {
-        const bookmark = await client.bookmarks.get({ id: bookmarkId });
-        return bookmark.enrichment;
+        const enrichment = await client.bookmarks.getEnrichmentStatus({
+          id: bookmarkId,
+        });
+        return enrichment;
       } catch (error) {
         console.error("Failed to fetch enrichment status:", error);
         return null;
       }
     },
     enabled: enabled && shouldPoll,
-    refetchInterval: shouldPoll ? pollingInterval : false,
+    refetchInterval: (data) => {
+      // Poll every 10 seconds if processing
+      if (data.state.data?.processingStatus === "PROCESSING") {
+        return 10000;
+      }
+      return false;
+    },
     refetchIntervalInBackground: false,
     staleTime: 5000, // Consider data stale after 5 seconds
   });
 
-  // Update local status when data changes
-  useEffect(() => {
-    if (data?.processingStatus) {
-      setStatus(data.processingStatus);
-    }
-  }, [data?.processingStatus]);
-
   return {
-    status,
+    status: data?.processingStatus ?? initialStatus ?? "PENDING",
     isPolling: shouldPoll,
     refetch,
+    data,
   };
 }

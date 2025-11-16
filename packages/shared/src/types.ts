@@ -27,7 +27,7 @@ export interface BookmarkPost {
   media?: Media[];
   collections?: Collection[];
   categories?: Category[];
-  enrichment?: BookmarkEnrichment;
+  enrichment?: BookmarkEnrichment | null;
   downloadedMedia?: DownloadedMedia[];
 }
 

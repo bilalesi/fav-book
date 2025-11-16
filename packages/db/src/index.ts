@@ -3,3 +3,4 @@ const prisma = new PrismaClient();
 
 export default prisma;
 export { Prisma };
+export * from "../prisma/generated/enums";

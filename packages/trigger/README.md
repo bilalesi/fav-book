@@ -1,4 +1,4 @@
-# @my-better-t-app/trigger
+# @favy/trigger
 
 Trigger.dev integration package for bookmark enrichment workflows.
 
@@ -44,7 +44,7 @@ TRIGGER_ENCRYPTION_KEY=your-encryption-key-here
 ### Spawning a Workflow
 
 ```typescript
-import { bookmarkEnrichmentWorkflow } from "@my-better-t-app/trigger";
+import { bookmarkEnrichmentWorkflow } from "@favy/trigger";
 
 // Trigger the workflow
 const run = await bookmarkEnrichmentWorkflow.trigger({
@@ -62,7 +62,7 @@ console.log("Workflow started:", run.id);
 ### Validating Connection
 
 ```typescript
-import { validateConnection } from "@my-better-t-app/trigger";
+import { validateConnection } from "@favy/trigger";
 
 try {
   await validateConnection();
@@ -75,7 +75,7 @@ try {
 ### Content Retrieval
 
 ```typescript
-import { retrieveContent } from "@my-better-t-app/trigger";
+import { retrieveContent } from "@favy/trigger";
 
 const content = await retrieveContent(
   "https://example.com/article",
@@ -150,8 +150,8 @@ bun run check-types
 ## Dependencies
 
 - `@trigger.dev/sdk`: Workflow orchestration
-- `@my-better-t-app/db`: Database access
-- `@my-better-t-app/shared`: Shared types
+- `@favy/db`: Database access
+- `@favy/shared`: Shared types
 
 ## Future Enhancements
 

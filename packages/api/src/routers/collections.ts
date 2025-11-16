@@ -1,7 +1,7 @@
 import { protectedProcedure } from "../index";
 import { z } from "zod";
-import prisma from "@my-better-t-app/db";
-import type { Collection } from "@my-better-t-app/shared";
+import prisma, { Prisma } from "@favy/db";
+import type { Collection } from "@favy/shared";
 
 // Validation schemas
 const createCollectionSchema = z.object({
@@ -14,53 +14,98 @@ const updateCollectionSchema = z.object({
   description: z.string().max(1000).optional(),
 });
 
+// Type for collection with includes
+type CollectionWithBookmarks = Prisma.CollectionGetPayload<{
+  include: {
+    bookmarks: {
+      include: {
+        bookmarkPost: {
+          include: {
+            media: true;
+            categories: {
+              include: {
+                category: true;
+              };
+            };
+            collections: {
+              include: {
+                collection: true;
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+}>;
+
 // Helper function to transform Prisma result to Collection
-function transformCollection(collection: any): Collection {
+function transformCollection(
+  collection: CollectionWithBookmarks | Prisma.CollectionGetPayload<object>
+): Collection {
+  const bookmarks =
+    "bookmarks" in collection && collection.bookmarks
+      ? collection.bookmarks.map((bc) => ({
+          id: bc.bookmarkPost.id,
+          userId: bc.bookmarkPost.userId,
+          platform: bc.bookmarkPost.platform,
+          postId: bc.bookmarkPost.postId,
+          postUrl: bc.bookmarkPost.postUrl,
+          content: bc.bookmarkPost.content,
+          authorName: bc.bookmarkPost.authorName,
+          authorUsername: bc.bookmarkPost.authorUsername,
+          authorProfileUrl: bc.bookmarkPost.authorProfileUrl,
+          savedAt: bc.bookmarkPost.savedAt,
+          createdAt: bc.bookmarkPost.createdAt,
+          viewCount: bc.bookmarkPost.viewCount,
+          metadata: bc.bookmarkPost.metadata
+            ? (bc.bookmarkPost.metadata as Prisma.JsonObject)
+            : undefined,
+          media:
+            "media" in bc.bookmarkPost && bc.bookmarkPost.media
+              ? bc.bookmarkPost.media.map((m) => ({
+                  id: m.id,
+                  bookmarkPostId: m.bookmarkPostId,
+                  type: m.type,
+                  url: m.url,
+                  thumbnailUrl: m.thumbnailUrl ?? undefined,
+                  metadata: m.metadata
+                    ? (m.metadata as Prisma.JsonObject)
+                    : undefined,
+                }))
+              : undefined,
+          categories:
+            "categories" in bc.bookmarkPost && bc.bookmarkPost.categories
+              ? bc.bookmarkPost.categories.map((cat) => ({
+                  id: cat.category.id,
+                  name: cat.category.name,
+                  userId: cat.category.userId ?? undefined,
+                  isSystem: cat.category.isSystem,
+                  createdAt: cat.category.createdAt,
+                }))
+              : undefined,
+          collections:
+            "collections" in bc.bookmarkPost && bc.bookmarkPost.collections
+              ? bc.bookmarkPost.collections.map((coll) => ({
+                  id: coll.collection.id,
+                  userId: coll.collection.userId,
+                  name: coll.collection.name,
+                  description: coll.collection.description ?? undefined,
+                  createdAt: coll.collection.createdAt,
+                  updatedAt: coll.collection.updatedAt,
+                }))
+              : undefined,
+        }))
+      : undefined;
+
   return {
     id: collection.id,
     userId: collection.userId,
     name: collection.name,
-    description: collection.description,
+    description: collection.description ?? undefined,
     createdAt: collection.createdAt,
     updatedAt: collection.updatedAt,
-    bookmarks: collection.bookmarks?.map((bc: any) => ({
-      id: bc.bookmarkPost.id,
-      userId: bc.bookmarkPost.userId,
-      platform: bc.bookmarkPost.platform,
-      postId: bc.bookmarkPost.postId,
-      postUrl: bc.bookmarkPost.postUrl,
-      content: bc.bookmarkPost.content,
-      authorName: bc.bookmarkPost.authorName,
-      authorUsername: bc.bookmarkPost.authorUsername,
-      authorProfileUrl: bc.bookmarkPost.authorProfileUrl,
-      savedAt: bc.bookmarkPost.savedAt,
-      createdAt: bc.bookmarkPost.createdAt,
-      viewCount: bc.bookmarkPost.viewCount,
-      metadata: bc.bookmarkPost.metadata as Record<string, any> | undefined,
-      media: bc.bookmarkPost.media?.map((m: any) => ({
-        id: m.id,
-        bookmarkPostId: m.bookmarkPostId,
-        type: m.type,
-        url: m.url,
-        thumbnailUrl: m.thumbnailUrl,
-        metadata: m.metadata as Record<string, any> | undefined,
-      })),
-      categories: bc.bookmarkPost.categories?.map((cat: any) => ({
-        id: cat.category.id,
-        name: cat.category.name,
-        userId: cat.category.userId,
-        isSystem: cat.category.isSystem,
-        createdAt: cat.category.createdAt,
-      })),
-      collections: bc.bookmarkPost.collections?.map((coll: any) => ({
-        id: coll.collection.id,
-        userId: coll.collection.userId,
-        name: coll.collection.name,
-        description: coll.collection.description,
-        createdAt: coll.collection.createdAt,
-        updatedAt: coll.collection.updatedAt,
-      })),
-    })),
+    bookmarks,
   };
 }
 

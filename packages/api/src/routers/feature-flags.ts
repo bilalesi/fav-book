@@ -5,7 +5,7 @@ import {
   updateFeatureFlags,
   validateFeatureFlags,
   type FeatureFlags,
-} from "@my-better-t-app/shared";
+} from "@favy/shared";
 
 /**
  * Admin email addresses that can modify feature flags

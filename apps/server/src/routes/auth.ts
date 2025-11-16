@@ -1,5 +1,5 @@
 import { Elysia } from "elysia";
-import { auth } from "@my-better-t-app/auth";
+import { auth } from "@favy/auth";
 
 /**
  * Authentication routes

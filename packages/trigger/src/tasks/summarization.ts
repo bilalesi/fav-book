@@ -24,7 +24,7 @@ export async function summarizeContent(
     }
 
     // Import AI service dynamically
-    const { createSummarizationService } = await import("@my-better-t-app/ai");
+    const { createSummarizationService } = await import("@favy/ai");
 
     // Create service instance
     const summarizationService = createSummarizationService();
@@ -70,7 +70,7 @@ export async function updateBookmarkSummary(
 
   try {
     // Import database client
-    const prisma = (await import("@my-better-t-app/db")).default;
+    const prisma = (await import("@favy/db")).default;
 
     // Update bookmark enrichment with summary data
     await prisma.bookmarkEnrichment.upsert({

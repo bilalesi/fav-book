@@ -16,14 +16,14 @@ export {
   createAIServiceError,
 } from "./client";
 
-// Export prompt utilities
+// Export prompt utilities and schemas
 export {
   buildSummarizationPrompt,
   buildKeywordExtractionPrompt,
   buildTagExtractionPrompt,
-  parseSummarizationResponse,
-  parseKeywordResponse,
-  parseTagResponse,
+  summarizationSchema,
+  keywordSchema,
+  tagSchema,
 } from "./prompts/summarization";
 
 // Export services

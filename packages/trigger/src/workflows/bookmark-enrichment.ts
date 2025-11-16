@@ -2,16 +2,15 @@ import { task } from "@trigger.dev/sdk/v3";
 import type {
   BookmarkEnrichmentInput,
   BookmarkEnrichmentOutput,
-  WorkflowStep,
 } from "../types";
-import { isRetryableError } from "../types";
-import { getFeatureFlag } from "@my-better-t-app/shared";
+import { WorkflowStep, isRetryableError } from "../types";
+import { getFeatureFlag } from "@favy/shared";
 import {
   createLogger,
   createWorkflowLogContext,
   PerformanceTimer,
 } from "../lib/logger";
-import { createWorkflowError } from "../lib/errors";
+import { createWorkflowError, classifyError } from "../lib/errors";
 
 /**
  * Main bookmark enrichment workflow
@@ -55,9 +54,7 @@ export const bookmarkEnrichmentWorkflow = task({
     try {
       // Step 1: Content Retrieval
       const contentRetrievalTimer = new PerformanceTimer();
-      const stepStartTime = logger.stepStart(
-        "content_retrieval" as WorkflowStep
-      );
+      const stepStartTime = logger.stepStart(WorkflowStep.CONTENT_RETRIEVAL);
       let fullContent = content;
 
       try {
@@ -65,30 +62,22 @@ export const bookmarkEnrichmentWorkflow = task({
         const { retrieveContent } = await import("../tasks/content-retrieval");
         fullContent = await retrieveContent(url, platform, content);
 
-        logger.stepComplete(
-          "content_retrieval" as WorkflowStep,
-          stepStartTime,
-          {
-            contentLength: fullContent.length,
-            originalLength: content.length,
-          }
-        );
+        logger.stepComplete(WorkflowStep.CONTENT_RETRIEVAL, stepStartTime, {
+          contentLength: fullContent.length,
+          originalLength: content.length,
+        });
 
         contentRetrievalTimer.logMetrics(logger, "content_retrieval");
       } catch (error) {
         const err = error as Error;
-        logger.stepFailed(
-          "content_retrieval" as WorkflowStep,
-          stepStartTime,
-          err,
-          {
-            originalContentLength: content.length,
-          }
-        );
+        logger.stepFailed(WorkflowStep.CONTENT_RETRIEVAL, stepStartTime, err, {
+          originalContentLength: content.length,
+        });
 
         // Non-critical error, continue with original content
         result.errors?.push({
-          step: "content_retrieval" as WorkflowStep,
+          step: WorkflowStep.CONTENT_RETRIEVAL,
+          errorType: classifyError(err),
           message: err.message,
           timestamp: new Date(),
           retryable: false,
@@ -101,12 +90,9 @@ export const bookmarkEnrichmentWorkflow = task({
 
       if (aiSummarizationEnabled) {
         const summarizationTimer = new PerformanceTimer();
-        const stepStartTime = logger.stepStart(
-          "summarization" as WorkflowStep,
-          {
-            contentLength: fullContent.length,
-          }
-        );
+        const stepStartTime = logger.stepStart(WorkflowStep.SUMMARIZATION, {
+          contentLength: fullContent.length,
+        });
 
         try {
           const { summarizeContent, updateBookmarkSummary } = await import(
@@ -123,7 +109,7 @@ export const bookmarkEnrichmentWorkflow = task({
           // Update bookmark with summary data
           await updateBookmarkSummary(bookmarkId, summaryResult);
 
-          logger.stepComplete("summarization" as WorkflowStep, stepStartTime, {
+          logger.stepComplete(WorkflowStep.SUMMARIZATION, stepStartTime, {
             summaryLength: summaryResult.summary.length,
             keywordsCount: summaryResult.keywords.length,
             tagsCount: summaryResult.tags.length,
@@ -137,24 +123,20 @@ export const bookmarkEnrichmentWorkflow = task({
           const err = error as Error;
           const workflowError = createWorkflowError(
             err,
-            "summarization" as WorkflowStep,
+            WorkflowStep.SUMMARIZATION,
             {
               contentLength: fullContent.length,
             }
           );
 
-          logger.stepFailed(
-            "summarization" as WorkflowStep,
-            stepStartTime,
-            err,
-            {
-              errorType: workflowError.errorType,
-              retryable: workflowError.retryable,
-            }
-          );
+          logger.stepFailed(WorkflowStep.SUMMARIZATION, stepStartTime, err, {
+            errorType: workflowError.errorType,
+            retryable: workflowError.retryable,
+          });
 
           result.errors?.push({
-            step: "summarization" as WorkflowStep,
+            step: WorkflowStep.SUMMARIZATION,
+            errorType: classifyError(err),
             message: err.message,
             timestamp: new Date(),
             retryable: isRetryableError(err),
@@ -178,12 +160,9 @@ export const bookmarkEnrichmentWorkflow = task({
 
       if (shouldProcessMedia) {
         const mediaTimer = new PerformanceTimer();
-        const stepStartTime = logger.stepStart(
-          "media_detection" as WorkflowStep,
-          {
-            url,
-          }
-        );
+        const stepStartTime = logger.stepStart(WorkflowStep.MEDIA_DETECTION, {
+          url,
+        });
 
         try {
           const { detectMediaContent, shouldDownloadMedia } = await import(
@@ -203,20 +182,16 @@ export const bookmarkEnrichmentWorkflow = task({
             mediaDetection.hasMedia &&
             shouldDownloadMedia(mediaDetection, maxSizeMB)
           ) {
-            logger.stepComplete(
-              "media_detection" as WorkflowStep,
-              stepStartTime,
-              {
-                hasMedia: true,
-                mediaType: mediaDetection.mediaType,
-                estimatedSize: mediaDetection.estimatedSize,
-              }
-            );
+            logger.stepComplete(WorkflowStep.MEDIA_DETECTION, stepStartTime, {
+              hasMedia: true,
+              mediaType: mediaDetection.mediaType,
+              estimatedSize: mediaDetection.estimatedSize,
+            });
 
             // Step 4: Download media
             const downloadTimer = new PerformanceTimer();
             const downloadStartTime = logger.stepStart(
-              "media_download" as WorkflowStep,
+              WorkflowStep.MEDIA_DOWNLOAD,
               {
                 mediaType: mediaDetection.mediaType,
                 maxSizeMB,
@@ -235,7 +210,7 @@ export const bookmarkEnrichmentWorkflow = task({
 
             if (downloadResult.success && downloadResult.filePath) {
               logger.stepComplete(
-                "media_download" as WorkflowStep,
+                WorkflowStep.MEDIA_DOWNLOAD,
                 downloadStartTime,
                 {
                   fileSize: downloadResult.metadata.fileSize,
@@ -251,7 +226,7 @@ export const bookmarkEnrichmentWorkflow = task({
               // Step 5: Upload to S3
               const uploadTimer = new PerformanceTimer();
               const uploadStartTime = logger.stepStart(
-                "storage_upload" as WorkflowStep,
+                WorkflowStep.STORAGE_UPLOAD,
                 {
                   fileSize: downloadResult.metadata.fileSize,
                 }
@@ -294,7 +269,7 @@ export const bookmarkEnrichmentWorkflow = task({
               );
 
               logger.stepComplete(
-                "storage_upload" as WorkflowStep,
+                WorkflowStep.STORAGE_UPLOAD,
                 uploadStartTime,
                 {
                   storageKey: uploadResult.key,
@@ -311,39 +286,31 @@ export const bookmarkEnrichmentWorkflow = task({
               });
             }
           } else {
-            logger.stepComplete(
-              "media_detection" as WorkflowStep,
-              stepStartTime,
-              {
-                hasMedia: mediaDetection.hasMedia,
-                reason: !mediaDetection.hasMedia
-                  ? "no_media"
-                  : "size_exceeds_limit",
-              }
-            );
+            logger.stepComplete(WorkflowStep.MEDIA_DETECTION, stepStartTime, {
+              hasMedia: mediaDetection.hasMedia,
+              reason: !mediaDetection.hasMedia
+                ? "no_media"
+                : "size_exceeds_limit",
+            });
           }
         } catch (error) {
           const err = error as Error;
           const workflowError = createWorkflowError(
             err,
-            "media_download" as WorkflowStep,
+            WorkflowStep.MEDIA_DOWNLOAD,
             {
               url,
             }
           );
 
-          logger.stepFailed(
-            "media_download" as WorkflowStep,
-            stepStartTime,
-            err,
-            {
-              errorType: workflowError.errorType,
-              retryable: workflowError.retryable,
-            }
-          );
+          logger.stepFailed(WorkflowStep.MEDIA_DOWNLOAD, stepStartTime, err, {
+            errorType: workflowError.errorType,
+            retryable: workflowError.retryable,
+          });
 
           result.errors?.push({
-            step: "media_download" as WorkflowStep,
+            step: WorkflowStep.MEDIA_DOWNLOAD,
+            errorType: classifyError(err),
             message: err.message,
             timestamp: new Date(),
             retryable: isRetryableError(err),
@@ -381,9 +348,7 @@ export const bookmarkEnrichmentWorkflow = task({
 
       // Step 6: Update database with final status
       const dbUpdateTimer = new PerformanceTimer();
-      const dbUpdateStartTime = logger.stepStart(
-        "database_update" as WorkflowStep
-      );
+      const dbUpdateStartTime = logger.stepStart(WorkflowStep.DATABASE_UPDATE);
 
       try {
         const { determineFinalStatus, updateBookmarkEnrichment } = await import(
@@ -412,16 +377,12 @@ export const bookmarkEnrichmentWorkflow = task({
           errors: result.errors,
         });
 
-        logger.stepComplete(
-          "database_update" as WorkflowStep,
-          dbUpdateStartTime,
-          {
-            status: finalStatus,
-            hasSummary,
-            hasMedia,
-            errorsCount: result.errors?.length ?? 0,
-          }
-        );
+        logger.stepComplete(WorkflowStep.DATABASE_UPDATE, dbUpdateStartTime, {
+          status: finalStatus,
+          hasSummary,
+          hasMedia,
+          errorsCount: result.errors?.length ?? 0,
+        });
 
         dbUpdateTimer.logMetrics(logger, "database_update");
 
@@ -446,11 +407,11 @@ export const bookmarkEnrichmentWorkflow = task({
         const err = error as Error;
         const workflowError = createWorkflowError(
           err,
-          "database_update" as WorkflowStep
+          WorkflowStep.DATABASE_UPDATE
         );
 
         logger.stepFailed(
-          "database_update" as WorkflowStep,
+          WorkflowStep.DATABASE_UPDATE,
           dbUpdateStartTime,
           err,
           {
@@ -460,7 +421,8 @@ export const bookmarkEnrichmentWorkflow = task({
         );
 
         result.errors?.push({
-          step: "database_update" as WorkflowStep,
+          step: WorkflowStep.DATABASE_UPDATE,
+          errorType: classifyError(err),
           message: err.message,
           timestamp: new Date(),
           retryable: isRetryableError(err),

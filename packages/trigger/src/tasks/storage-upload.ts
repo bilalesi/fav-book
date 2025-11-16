@@ -1,4 +1,4 @@
-import { logger } from "@trigger.dev/sdk/v3";
+import { logger } from "@trigger.dev/sdk";
 import type { UploadResult, MediaMetadata } from "../types";
 
 /**
@@ -22,19 +22,18 @@ export async function uploadMediaToStorage(
 
   try {
     // Import storage service
-    const storage = await import("@my-better-t-app/storage");
+    const storage = await import("@favy/storage");
 
     // Get S3 configuration from environment
     const bucket = process.env.S3_BUCKET || "bookmark-media";
 
     // Create S3 client
     const client = storage.createS3Client({
-      endpoint: process.env.S3_ENDPOINT,
+      endpoint: process.env.S3_ENDPOINT!,
       region: process.env.S3_REGION || "us-east-1",
-      credentials: {
-        accessKeyId: process.env.S3_ACCESS_KEY!,
-        secretAccessKey: process.env.S3_SECRET_KEY!,
-      },
+      accessKeyId: process.env.S3_ACCESS_KEY!,
+      secretAccessKey: process.env.S3_SECRET_KEY!,
+      bucket: bucket,
     });
 
     // Prepare metadata for storage
@@ -102,17 +101,16 @@ export async function generatePresignedUrl(
   expiresIn: number = 7 * 24 * 60 * 60 // 7 days
 ): Promise<string> {
   try {
-    const storage = await import("@my-better-t-app/storage");
+    const storage = await import("@favy/storage");
 
     const bucket = process.env.S3_BUCKET || "bookmark-media";
 
     const client = storage.createS3Client({
-      endpoint: process.env.S3_ENDPOINT,
+      endpoint: process.env.S3_ENDPOINT!,
       region: process.env.S3_REGION || "us-east-1",
-      credentials: {
-        accessKeyId: process.env.S3_ACCESS_KEY!,
-        secretAccessKey: process.env.S3_SECRET_KEY!,
-      },
+      accessKeyId: process.env.S3_ACCESS_KEY!,
+      secretAccessKey: process.env.S3_SECRET_KEY!,
+      bucket: bucket,
     });
 
     return await storage.getFileUrl(client, bucket, storageKey, expiresIn);
@@ -133,17 +131,16 @@ export async function deleteMediaFromStorage(
   storageKey: string
 ): Promise<void> {
   try {
-    const storage = await import("@my-better-t-app/storage");
+    const storage = await import("@favy/storage");
 
     const bucket = process.env.S3_BUCKET || "bookmark-media";
 
     const client = storage.createS3Client({
-      endpoint: process.env.S3_ENDPOINT,
+      endpoint: process.env.S3_ENDPOINT!,
       region: process.env.S3_REGION || "us-east-1",
-      credentials: {
-        accessKeyId: process.env.S3_ACCESS_KEY!,
-        secretAccessKey: process.env.S3_SECRET_KEY!,
-      },
+      accessKeyId: process.env.S3_ACCESS_KEY!,
+      secretAccessKey: process.env.S3_SECRET_KEY!,
+      bucket: bucket,
     });
 
     await storage.deleteFile(client, bucket, storageKey);

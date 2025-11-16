@@ -1,4 +1,4 @@
-import type { Platform } from "@my-better-t-app/shared";
+import type { Platform } from "@favy/shared";
 
 /**
  * Content retrieval task

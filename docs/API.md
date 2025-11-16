@@ -988,7 +988,7 @@ async function loadAllBookmarks() {
 
 ## TypeScript Types
 
-All types are exported from `@my-better-t-app/shared`:
+All types are exported from `@favy/shared`:
 
 ```typescript
 import type {
@@ -998,7 +998,7 @@ import type {
   Category,
   Media,
   Platform,
-} from "@my-better-t-app/shared";
+} from "@favy/shared";
 ```
 
 ## Client SDK
@@ -1006,7 +1006,7 @@ import type {
 The oRPC client is automatically generated and type-safe:
 
 ```typescript
-import { createClient } from "@my-better-t-app/api/client";
+import { createClient } from "@favy/api/client";
 
 const client = createClient({
   baseUrl: "https://your-domain.com/api",

@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { BookmarkFilters as BookmarkFiltersType } from "@my-better-t-app/shared";
+import type { BookmarkFilters as BookmarkFiltersType } from "@favy/shared";
 import { z } from "zod";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { client } from "@/utils/orpc";
@@ -35,6 +35,8 @@ export const Route = createFileRoute("/bookmarks/")({
   validateSearch: bookmarksSearchSchema,
 });
 
+type CollectionsList = Awaited<ReturnType<typeof client.collections.list>>;
+
 function BookmarksListPage() {
   const navigate = useNavigate({ from: "/bookmarks" });
   const searchParams = Route.useSearch();
@@ -47,7 +49,8 @@ function BookmarksListPage() {
   const [isProcessingBulk, setIsProcessingBulk] = useState(false);
 
   // Fetch collections for bulk operations
-  const { data: collections = [] } = useCollectionsList();
+  const { data: collectionsData } = useCollectionsList();
+  const collections: CollectionsList = collectionsData ?? [];
 
   // Parse filters from URL
   const [filters, setFilters] = useState<BookmarkFiltersType>(() => {
@@ -315,7 +318,9 @@ function BookmarksListPage() {
       queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
       queryClient.invalidateQueries({ queryKey: ["collections"] });
 
-      const collection = collections.find((c) => c.id === collectionId);
+      const collection = collections.find(
+        (c: CollectionsList[number]) => c.id === collectionId
+      );
       toast.success(
         `Successfully added ${selectedBookmarkIds.size} bookmark(s) to ${
           collection?.name || "collection"
@@ -391,7 +396,7 @@ function BookmarksListPage() {
                       No collections available
                     </div>
                   ) : (
-                    collections.map((collection) => (
+                    collections.map((collection: CollectionsList[number]) => (
                       <DropdownMenuItem
                         key={collection.id}
                         onClick={() => handleBulkAddToCollection(collection.id)}

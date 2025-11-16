@@ -16,7 +16,7 @@ import { useUpdateBookmark } from "@/hooks/use-bookmarks";
 import { useCollectionsList } from "@/hooks/use-collections";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { BookmarkPost, Collection } from "@my-better-t-app/shared";
+import type { BookmarkPost, Collection } from "@favy/shared";
 
 interface EditBookmarkDialogProps {
   bookmark: BookmarkPost;

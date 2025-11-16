@@ -37,7 +37,7 @@ export async function updateBookmarkEnrichment(
 
   try {
     // Import database client
-    const prisma = (await import("@my-better-t-app/db")).default;
+    const prisma = (await import("@favy/db")).default;
 
     // Prepare error message if any errors exist
     const errorMessage = data.errors
@@ -112,7 +112,7 @@ export async function createDownloadedMediaRecord(
 
   try {
     // Import database client
-    const prisma = (await import("@my-better-t-app/db")).default;
+    const prisma = (await import("@favy/db")).default;
 
     // Map media type to MediaType enum
     const mediaType = metadata.type === "video" ? "VIDEO" : "IMAGE"; // Use IMAGE for audio since AUDIO is not in enum
@@ -175,7 +175,7 @@ export async function updateBookmarkStatus(
 
   try {
     // Import database client
-    const prisma = (await import("@my-better-t-app/db")).default;
+    const prisma = (await import("@favy/db")).default;
 
     // Upsert bookmark enrichment status
     await prisma.bookmarkEnrichment.upsert({
@@ -232,7 +232,7 @@ export async function markMediaDownloadFailed(
 
   try {
     // Import database client
-    const prisma = (await import("@my-better-t-app/db")).default;
+    const prisma = (await import("@favy/db")).default;
 
     // Create failed media record
     await prisma.downloadedMedia.create({
@@ -306,7 +306,7 @@ export async function batchUpdateBookmarks(
 
   try {
     // Import database client
-    const prisma = (await import("@my-better-t-app/db")).default;
+    const prisma = (await import("@favy/db")).default;
 
     // Use transaction for batch updates
     await prisma.$transaction(

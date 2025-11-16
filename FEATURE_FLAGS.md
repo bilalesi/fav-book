@@ -174,7 +174,7 @@ ADMIN_EMAILS=admin@example.com,admin2@example.com
 ### Accessing Feature Flags
 
 ```typescript
-import { getFeatureFlag, getFeatureFlags } from "@my-better-t-app/shared";
+import { getFeatureFlag, getFeatureFlags } from "@favy/shared";
 
 // Get a single flag
 const aiEnabled = getFeatureFlag("ENABLE_AI_SUMMARIZATION");
@@ -186,7 +186,7 @@ const allFlags = getFeatureFlags();
 ### Updating Feature Flags
 
 ```typescript
-import { updateFeatureFlags } from "@my-better-t-app/shared";
+import { updateFeatureFlags } from "@favy/shared";
 
 // Update one or more flags
 updateFeatureFlags({
@@ -200,7 +200,7 @@ updateFeatureFlags({
 All feature flag updates are automatically validated:
 
 ```typescript
-import { validateFeatureFlags } from "@my-better-t-app/shared";
+import { validateFeatureFlags } from "@favy/shared";
 
 const errors = validateFeatureFlags({
   MAX_MEDIA_SIZE_MB: 10000, // Too large!

@@ -1,6 +1,6 @@
 import { protectedProcedure } from "../index";
 import { z } from "zod";
-import prisma from "@my-better-t-app/db";
+import prisma from "@favy/db";
 
 const preferencesSchema = z.object({
   defaultView: z.enum(["card", "table"]).optional(),

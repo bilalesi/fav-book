@@ -15,7 +15,7 @@ export interface SummaryResult {
   summary: string;
   keywords: string[];
   tags: string[];
-  tokensUsed: number;
+  tokensUsed?: number;
 }
 
 /**

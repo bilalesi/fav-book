@@ -1,7 +1,7 @@
 import { protectedProcedure } from "../index";
 import { z } from "zod";
-import prisma from "@my-better-t-app/db";
-import type { Category } from "@my-better-t-app/shared";
+import prisma from "@favy/db";
+import type { Category } from "@favy/shared";
 
 // Validation schemas
 const createCategorySchema = z.object({

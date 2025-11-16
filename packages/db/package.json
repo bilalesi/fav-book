@@ -1,5 +1,5 @@
 {
-  "name": "@my-better-t-app/db",
+  "name": "@favy/db",
   "type": "module",
   "exports": {
     ".": {

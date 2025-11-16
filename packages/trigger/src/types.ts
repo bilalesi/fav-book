@@ -1,17 +1,15 @@
-import type { Platform } from "@my-better-t-app/shared";
+import type { Platform } from "@favy/shared";
+import {
+  WorkflowStep as PrismaWorkflowStep,
+  ErrorType as PrismaErrorType,
+} from "@favy/db";
 
 /**
  * Workflow step enumeration
- * Defines all possible steps in the bookmark enrichment workflow
+ * Re-export from Prisma for consistency
  */
-export enum WorkflowStep {
-  CONTENT_RETRIEVAL = "content_retrieval",
-  SUMMARIZATION = "summarization",
-  MEDIA_DETECTION = "media_detection",
-  MEDIA_DOWNLOAD = "media_download",
-  STORAGE_UPLOAD = "storage_upload",
-  DATABASE_UPDATE = "database_update",
-}
+export const WorkflowStep = PrismaWorkflowStep;
+export type WorkflowStep = PrismaWorkflowStep;
 
 /**
  * Input payload for bookmark enrichment workflow
@@ -133,6 +131,8 @@ export interface SummaryResult {
 export interface WorkflowError {
   /** Step where the error occurred */
   step: WorkflowStep;
+  /** Classified error type */
+  errorType: ErrorType;
   /** Error message */
   message: string;
   /** Timestamp when error occurred */
@@ -141,6 +141,8 @@ export interface WorkflowError {
   retryable: boolean;
   /** Stack trace if available */
   stackTrace?: string;
+  /** Additional context about the error */
+  context?: Record<string, any>;
 }
 
 /**
@@ -207,26 +209,17 @@ export interface RetryConfig {
 
 /**
  * Error types for classification
+ * Re-export from Prisma for consistency
  */
-export enum ErrorType {
-  NETWORK_ERROR = "NETWORK_ERROR",
-  TIMEOUT = "TIMEOUT",
-  SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE",
-  RATE_LIMIT = "RATE_LIMIT",
-  INVALID_CONTENT = "INVALID_CONTENT",
-  AUTHENTICATION_FAILED = "AUTHENTICATION_FAILED",
-  NOT_FOUND = "NOT_FOUND",
-  MALFORMED_URL = "MALFORMED_URL",
-  QUOTA_EXCEEDED = "QUOTA_EXCEEDED",
-  UNKNOWN = "UNKNOWN",
-}
+export const ErrorType = PrismaErrorType;
+export type ErrorType = PrismaErrorType;
 
 /**
  * Determines if an error is retryable based on its type
  * @deprecated Use isRetryableError from lib/errors instead
  */
 export function isRetryableError(error: Error | ErrorType): boolean {
-  const retryableTypes = [
+  const retryableTypes: ErrorType[] = [
     ErrorType.NETWORK_ERROR,
     ErrorType.TIMEOUT,
     ErrorType.SERVICE_UNAVAILABLE,
@@ -244,7 +237,7 @@ export function isRetryableError(error: Error | ErrorType): boolean {
     return false;
   }
 
-  return retryableTypes.includes(error);
+  return retryableTypes.includes(error as ErrorType);
 }
 
 /**

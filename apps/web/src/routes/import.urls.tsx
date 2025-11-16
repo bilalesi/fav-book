@@ -19,6 +19,8 @@ import { useCollectionsList } from "@/hooks/use-collections";
 import Loader from "@/components/loader";
 import { Link } from "@tanstack/react-router";
 
+type CollectionsList = Awaited<ReturnType<typeof client.collections.list>>;
+
 export const Route = createFileRoute("/import/urls")({
   component: RouteComponent,
   beforeLoad: async () => {
@@ -66,8 +68,9 @@ function RouteComponent() {
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [showErrors, setShowErrors] = useState(false);
 
-  const { data: collections, isLoading: collectionsLoading } =
+  const { data: collectionsData, isLoading: collectionsLoading } =
     useCollectionsList();
+  const collections: CollectionsList = collectionsData ?? [];
 
   // Client-side URL validation with inline feedback
   // Requirements: 2.1
@@ -581,7 +584,7 @@ function RouteComponent() {
                   </div>
                 ) : collections && collections.length > 0 ? (
                   <div className="space-y-3 max-h-[300px] overflow-y-auto">
-                    {collections.map((collection) => (
+                    {collections.map((collection: CollectionsList[number]) => (
                       <div
                         key={collection.id}
                         className="flex items-start space-x-3 p-3 rounded-lg hover:bg-accent transition-colors"

@@ -6,8 +6,8 @@ import { toast } from "sonner";
 import { createRouterClient } from "@orpc/server";
 import type { RouterClient } from "@orpc/server";
 import { createIsomorphicFn } from "@tanstack/react-start";
-import { appRouter } from "@my-better-t-app/api/routers/index";
-import { createContext } from "@my-better-t-app/api/context";
+import { appRouter } from "@favy/api/routers/index";
+import { createContext } from "@favy/api/context";
 
 export const queryClient = new QueryClient({
   defaultOptions: {

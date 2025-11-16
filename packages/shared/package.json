@@ -1,5 +1,5 @@
 {
-    "name": "@my-better-t-app/shared",
+    "name": "@favy/shared",
     "type": "module",
     "exports": {
         ".": {

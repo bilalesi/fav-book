@@ -14,9 +14,9 @@
     "test:coverage": "vitest --coverage"
   },
   "dependencies": {
-    "@my-better-t-app/api": "workspace:*",
-    "@my-better-t-app/auth": "workspace:*",
-    "@my-better-t-app/shared": "workspace:*",
+    "@favy/api": "workspace:*",
+    "@favy/auth": "workspace:*",
+    "@favy/shared": "workspace:*",
     "@orpc/client": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/tanstack-query": "^1.10.0",

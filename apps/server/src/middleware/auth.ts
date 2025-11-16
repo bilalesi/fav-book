@@ -1,4 +1,4 @@
-import { auth } from "@my-better-t-app/auth";
+import { auth } from "@favy/auth";
 
 /**
  * Session validation middleware

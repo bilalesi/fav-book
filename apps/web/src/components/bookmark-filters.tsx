@@ -14,7 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useCategoriesList } from "@/hooks/use-categories";
 import { Filter, X, Calendar, ArrowUpDown } from "lucide-react";
-import type { BookmarkFilters } from "@my-better-t-app/shared";
+import type { BookmarkFilters } from "@favy/shared";
 
 interface BookmarkFiltersProps {
   filters: BookmarkFilters;

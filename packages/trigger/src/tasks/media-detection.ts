@@ -1,4 +1,4 @@
-import { logger } from "@trigger.dev/sdk/v3";
+import { logger } from "@trigger.dev/sdk";
 import type { MediaDetectionResult } from "../types";
 
 /**
@@ -32,7 +32,7 @@ export async function detectMediaContent(
 
   try {
     // Import media downloader service
-    const { detectMedia } = await import("@my-better-t-app/media-downloader");
+    const { detectMedia } = await import("@favy/media-downloader");
 
     // Detect media
     const result = await detectMedia(url);

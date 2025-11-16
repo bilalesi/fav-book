@@ -1,4 +1,5 @@
-import { generateText } from "ai";
+import { generateObject } from "ai";
+import { z } from "zod";
 import {
   createLMStudioClient,
   getLMStudioConfig,
@@ -8,9 +9,9 @@ import {
   buildSummarizationPrompt,
   buildKeywordExtractionPrompt,
   buildTagExtractionPrompt,
-  parseSummarizationResponse,
-  parseKeywordResponse,
-  parseTagResponse,
+  summarizationSchema,
+  keywordSchema,
+  tagSchema,
 } from "../prompts/summarization";
 import type {
   SummarizationService,
@@ -57,26 +58,34 @@ export class LMStudioSummarizationService implements SummarizationService {
       // Build prompt
       const prompt = buildSummarizationPrompt(truncatedContent, options);
 
-      // Generate text using AI SDK
-      const { text, usage } = await generateText({
-        model: this.client(this.config.model),
+      // Generate structured output using AI SDK 6
+      const result = await generateObject({
+        model: this.client,
+        schema: summarizationSchema,
         prompt,
-        maxTokens: options?.maxLength
+        maxOutputTokens: options?.maxLength
           ? Math.min(this.config.maxTokens, options.maxLength * 2)
           : this.config.maxTokens,
         temperature: options?.temperature ?? this.config.temperature,
+        mode: "json",
+        system:
+          "Please generate only the JSON output. DO NOT provide any preamble.",
       });
 
-      // Parse and validate response
-      const parsed = parseSummarizationResponse(text);
+      // Type the result using Zod inference
+      type SummarizationResult = z.infer<typeof summarizationSchema>;
+      const data = result.object as SummarizationResult;
+
+      console.log("# # generateSummary # object, usage:", data, result.usage);
 
       return {
-        summary: parsed.summary,
-        keywords: parsed.keywords,
-        tags: parsed.tags,
-        tokensUsed: usage.totalTokens,
+        summary: data.summary,
+        keywords: data.keywords,
+        tags: data.tags,
+        tokensUsed: result.usage.totalTokens,
       };
     } catch (error) {
+      console.log("# # generateSummary # error:", error);
       throw createAIServiceError(error, "Failed to generate summary");
     }
   }
@@ -104,16 +113,18 @@ export class LMStudioSummarizationService implements SummarizationService {
       // Build prompt
       const prompt = buildKeywordExtractionPrompt(truncatedContent, count);
 
-      // Generate text using AI SDK
-      const { text } = await generateText({
-        model: this.client(this.config.model),
+      // Generate structured output using AI SDK 6
+      const result = await generateObject({
+        model: this.client,
+        schema: keywordSchema,
         prompt,
-        maxTokens: 500, // Keywords should be short
+        maxOutputTokens: 500, // Keywords should be short
         temperature: this.config.temperature,
       });
 
-      // Parse and validate response
-      return parseKeywordResponse(text);
+      type KeywordResult = z.infer<typeof keywordSchema>;
+      const data = result.object as KeywordResult;
+      return data.keywords;
     } catch (error) {
       throw createAIServiceError(error, "Failed to extract keywords");
     }
@@ -139,16 +150,18 @@ export class LMStudioSummarizationService implements SummarizationService {
       // Build prompt
       const prompt = buildTagExtractionPrompt(truncatedContent, count);
 
-      // Generate text using AI SDK
-      const { text } = await generateText({
-        model: this.client(this.config.model),
+      // Generate structured output using AI SDK 6
+      const result = await generateObject({
+        model: this.client,
+        schema: tagSchema,
         prompt,
-        maxTokens: 300, // Tags should be short
+        maxOutputTokens: 300, // Tags should be short
         temperature: this.config.temperature,
       });
 
-      // Parse and validate response
-      return parseTagResponse(text);
+      type TagResult = z.infer<typeof tagSchema>;
+      const data = result.object as TagResult;
+      return data.tags;
     } catch (error) {
       throw createAIServiceError(error, "Failed to extract tags");
     }
