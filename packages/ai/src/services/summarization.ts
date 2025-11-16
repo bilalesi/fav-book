@@ -1,5 +1,7 @@
 import { generateObject } from "ai";
 import { z } from "zod";
+import prisma from "@favy/db";
+
 import {
   createLMStudioClient,
   getLMStudioConfig,
@@ -8,10 +10,8 @@ import {
 import {
   buildSummarizationPrompt,
   buildKeywordExtractionPrompt,
-  buildTagExtractionPrompt,
-  summarizationSchema,
+  createSummarizationSchema,
   keywordSchema,
-  tagSchema,
 } from "../prompts/summarization";
 import type {
   SummarizationService,
@@ -20,9 +20,6 @@ import type {
   LMStudioConfig,
 } from "../types";
 
-/**
- * Implementation of the SummarizationService using LM Studio
- */
 export class LMStudioSummarizationService implements SummarizationService {
   private client: ReturnType<typeof createLMStudioClient>;
   private config: LMStudioConfig;
@@ -35,33 +32,45 @@ export class LMStudioSummarizationService implements SummarizationService {
     this.client = createLMStudioClient(config);
   }
 
-  /**
-   * Generate a summary with keywords and tags from content
-   */
   async generateSummary(
     content: string,
     options?: SummaryOptions
   ): Promise<SummaryResult> {
     try {
-      // Validate input
       if (!content || content.trim().length === 0) {
         throw new Error("Content cannot be empty");
       }
 
-      // Truncate content if too long (to avoid token limits)
       const maxContentLength = 10000; // ~2500 tokens
       const truncatedContent =
         content.length > maxContentLength
           ? content.substring(0, maxContentLength) + "..."
           : content;
+      // Fetch allowed categories from database
+      const allowedTags = (await prisma.category.findMany()).map((v) => ({
+        id: v.id,
+        name: v.name,
+      }));
 
-      // Build prompt
-      const prompt = buildSummarizationPrompt(truncatedContent, options);
+      console.log(
+        "# # generateSummary # allowedTags:",
+        allowedTags.length,
+        "tags"
+      );
 
-      // Generate structured output using AI SDK 6
+      // Build prompt with allowed tags
+      const prompt = buildSummarizationPrompt(
+        truncatedContent,
+        options,
+        allowedTags
+      );
+
+      // Create dynamic schema with allowed tag IDs for strict validation
+      const dynamicSchema = createSummarizationSchema(allowedTags);
+
       const result = await generateObject({
         model: this.client,
-        schema: summarizationSchema,
+        schema: dynamicSchema,
         prompt,
         maxOutputTokens: options?.maxLength
           ? Math.min(this.config.maxTokens, options.maxLength * 2)
@@ -69,14 +78,23 @@ export class LMStudioSummarizationService implements SummarizationService {
         temperature: options?.temperature ?? this.config.temperature,
         mode: "json",
         system:
-          "Please generate only the JSON output. DO NOT provide any preamble.",
+          "You must return valid JSON. Select category tags ONLY from the provided allowed list using the exact id and name values. DO NOT create new tags.",
       });
 
-      // Type the result using Zod inference
-      type SummarizationResult = z.infer<typeof summarizationSchema>;
-      const data = result.object as SummarizationResult;
+      // Type the result
+      const data = result.object as {
+        summary: string;
+        keywords: string[];
+        tags: Array<{ id: string; name: string }>;
+      };
 
-      console.log("# # generateSummary # object, usage:", data, result.usage);
+      console.log("# # generateSummary # result:", {
+        summaryLength: data.summary.length,
+        keywordsCount: data.keywords.length,
+        tagsCount: data.tags.length,
+        selectedTags: data.tags.map((t) => t.name),
+        tokensUsed: result.usage.totalTokens,
+      });
 
       return {
         summary: data.summary,
@@ -90,9 +108,6 @@ export class LMStudioSummarizationService implements SummarizationService {
     }
   }
 
-  /**
-   * Extract keywords from content
-   */
   async extractKeywords(
     content: string,
     count: number = 10
@@ -129,48 +144,8 @@ export class LMStudioSummarizationService implements SummarizationService {
       throw createAIServiceError(error, "Failed to extract keywords");
     }
   }
-
-  /**
-   * Extract semantic tags from content
-   */
-  async extractTags(content: string, count: number = 8): Promise<string[]> {
-    try {
-      // Validate input
-      if (!content || content.trim().length === 0) {
-        throw new Error("Content cannot be empty");
-      }
-
-      // Truncate content if too long
-      const maxContentLength = 10000;
-      const truncatedContent =
-        content.length > maxContentLength
-          ? content.substring(0, maxContentLength) + "..."
-          : content;
-
-      // Build prompt
-      const prompt = buildTagExtractionPrompt(truncatedContent, count);
-
-      // Generate structured output using AI SDK 6
-      const result = await generateObject({
-        model: this.client,
-        schema: tagSchema,
-        prompt,
-        maxOutputTokens: 300, // Tags should be short
-        temperature: this.config.temperature,
-      });
-
-      type TagResult = z.infer<typeof tagSchema>;
-      const data = result.object as TagResult;
-      return data.tags;
-    } catch (error) {
-      throw createAIServiceError(error, "Failed to extract tags");
-    }
-  }
 }
 
-/**
- * Create a default summarization service instance
- */
 export function createSummarizationService(
   config?: Partial<LMStudioConfig>
 ): SummarizationService {

@@ -6,6 +6,7 @@ import { Link } from "@tanstack/react-router";
 import { queryClient, client } from "@/utils/orpc";
 import type { ReactNode } from "react";
 import { BookmarkStatusBadge } from "./bookmark-status-badge";
+import { cloneElement, isValidElement } from "react";
 
 interface BookmarkCardBaseProps {
   bookmark: BookmarkPost;
@@ -38,6 +39,21 @@ export function BookmarkCardBase({
     });
   };
 
+  // Add data-interactive and stopPropagation to external link button
+  const enhancedExternalLinkButton = isValidElement(externalLinkButton)
+    ? cloneElement(externalLinkButton as React.ReactElement<any>, {
+        "data-interactive": "true",
+        onClick: (e: React.MouseEvent) => {
+          e.stopPropagation();
+          // Call original onClick if it exists
+          const originalOnClick = (externalLinkButton as any).props?.onClick;
+          if (originalOnClick) {
+            originalOnClick(e);
+          }
+        },
+      })
+    : externalLinkButton;
+
   return (
     <Card
       className="hover:shadow-lg transition-shadow"
@@ -65,7 +81,7 @@ export function BookmarkCardBase({
             </div>
             {headerContent}
           </div>
-          {externalLinkButton}
+          {enhancedExternalLinkButton}
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -114,6 +130,8 @@ export function BookmarkCardBase({
                 variant="outline"
                 className="text-xs"
                 role="listitem"
+                data-interactive="true"
+                onClick={(e) => e.stopPropagation()}
               >
                 {category.name}
               </Badge>
@@ -124,6 +142,8 @@ export function BookmarkCardBase({
                 className="text-xs"
                 role="listitem"
                 aria-label={`${bookmark.categories.length - 3} more categories`}
+                data-interactive="true"
+                onClick={(e) => e.stopPropagation()}
               >
                 +{bookmark.categories.length - 3}
               </Badge>
@@ -132,7 +152,7 @@ export function BookmarkCardBase({
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-2 border-t">
+        <div className="flex items-center justify-between pt-2 border-t mt-auto">
           <time
             className="text-xs text-muted-foreground"
             dateTime={bookmark.savedAt.toISOString()}
@@ -144,6 +164,8 @@ export function BookmarkCardBase({
             params={{ id: bookmark.id }}
             className="text-xs text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-ring rounded px-1"
             aria-label={`View details for bookmark from ${bookmark.authorName}`}
+            data-interactive="true"
+            onClick={(e) => e.stopPropagation()}
           >
             View Details
           </Link>

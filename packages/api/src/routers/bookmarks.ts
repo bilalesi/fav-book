@@ -1,13 +1,13 @@
 import { protectedProcedure } from "../index";
 import { z } from "zod";
 import prisma, { Prisma } from "@favy/db";
-import type { BookmarkListResponse } from "@favy/shared";
 import { validateAndNormalizeUrl } from "../lib/url-normalizer";
 import { extractMetadata } from "../lib/metadata-extractor";
 import { tasks } from "@trigger.dev/sdk/v3";
 import type { BookmarkEnrichmentInput } from "@favy/trigger";
 import { isEnrichmentEnabled, isMediaDownloadEnabled } from "../lib/utils";
 import { Prisma as PrismaType } from "@prisma/client";
+
 const platformSchema = z.enum(["TWITTER", "LINKEDIN", "GENERIC_URL"]);
 const mediaTypeSchema = z.enum(["IMAGE", "VIDEO", "LINK"]);
 
@@ -850,7 +850,11 @@ export const bookmarksRouter = {
       let successCount = 0;
       let failureCount = 0;
       const errors: Array<{ index: number; error: string }> = [];
-      const createdBookmarkIds: string[] = [];
+      // Use a Map to store created bookmarks with their original data
+      const successfulBookmarks = new Map<
+        string,
+        { dbId: string; originalData: (typeof bookmarks)[number] }
+      >();
 
       // Process bookmarks in a transaction
       await prisma.$transaction(async (tx) => {
@@ -917,7 +921,11 @@ export const bookmarksRouter = {
               },
             });
 
-            createdBookmarkIds.push(created.id);
+            // Store the created bookmark ID with its original data
+            successfulBookmarks.set(created.id, {
+              dbId: created.id,
+              originalData: bookmark,
+            });
             successCount++;
           } catch (error) {
             failureCount++;
@@ -931,48 +939,42 @@ export const bookmarksRouter = {
 
       // Spawn enrichment workflows for all successfully created bookmarks
       // Do this outside the transaction to avoid blocking
-      if (createdBookmarkIds.length > 0) {
+      if (successfulBookmarks.size > 0) {
         console.log(
-          `[Bulk Import] Spawning enrichment workflows for ${createdBookmarkIds.length} bookmarks`
+          `[Bulk Import] Spawning enrichment workflows for ${successfulBookmarks.size} bookmarks`
         );
 
         // Spawn workflows in parallel but don't wait for them
         Promise.all(
-          createdBookmarkIds.map(async (bookmarkId, index) => {
-            const bookmark = bookmarks.find(
-              (_, i) =>
-                !errors.some((e) => e.index === i) &&
-                createdBookmarkIds.indexOf(bookmarkId) === index
-            );
+          Array.from(successfulBookmarks.entries()).map(
+            async ([bookmarkId, { originalData }]) => {
+              const workflowId = await spawnEnrichmentWorkflow(
+                bookmarkId,
+                userId,
+                platform,
+                originalData.postUrl,
+                originalData.content
+              );
 
-            if (!bookmark) return;
-
-            const workflowId = await spawnEnrichmentWorkflow(
-              bookmarkId,
-              userId,
-              platform,
-              bookmark.postUrl,
-              bookmark.content
-            );
-
-            // Create enrichment record if workflow was spawned
-            if (workflowId) {
-              await prisma.bookmarkEnrichment
-                .create({
-                  data: {
-                    bookmarkPostId: bookmarkId,
-                    processingStatus: "PENDING",
-                    workflowId,
-                  },
-                })
-                .catch((err) => {
-                  console.error(
-                    `[Bulk Import] Failed to create enrichment record for ${bookmarkId}:`,
-                    err
-                  );
-                });
+              // Create enrichment record if workflow was spawned
+              if (workflowId) {
+                await prisma.bookmarkEnrichment
+                  .create({
+                    data: {
+                      bookmarkPostId: bookmarkId,
+                      processingStatus: "PENDING",
+                      workflowId,
+                    },
+                  })
+                  .catch((err) => {
+                    console.error(
+                      `[Bulk Import] Failed to create enrichment record for ${bookmarkId}:`,
+                      err
+                    );
+                  });
+              }
             }
-          })
+          )
         ).catch((err) => {
           console.error("[Bulk Import] Error spawning workflows:", err);
         });
@@ -1144,12 +1146,13 @@ export const bookmarksRouter = {
         });
 
         // Spawn enrichment workflow asynchronously
+        // For URL bookmarks, pass the URL as content so the workflow can fetch the actual page content
         const workflowId = await spawnEnrichmentWorkflow(
           bookmark.id,
           userId,
           "GENERIC_URL",
           normalizedUrl,
-          description || ""
+          description || normalizedUrl // Use URL as fallback if description is empty
         );
 
         // Create enrichment record if workflow was spawned

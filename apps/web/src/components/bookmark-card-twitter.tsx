@@ -49,6 +49,8 @@ export function BookmarkCardTwitter({ bookmark }: BookmarkCardTwitterProps) {
                 rel="noopener noreferrer"
                 className="block border rounded-lg overflow-hidden hover:bg-accent transition-colors"
                 role="listitem"
+                data-interactive="true"
+                onClick={(e) => e.stopPropagation()}
               >
                 {media.thumbnailUrl && (
                   <div className="aspect-video bg-muted">
@@ -131,6 +133,8 @@ export function BookmarkCardTwitter({ bookmark }: BookmarkCardTwitterProps) {
       rel="noopener noreferrer"
       className="text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring rounded p-1"
       aria-label="Open original post in new tab"
+      data-interactive="true"
+      onClick={(e) => e.stopPropagation()}
     >
       <ExternalLink className="h-4 w-4" aria-hidden="true" />
     </a>

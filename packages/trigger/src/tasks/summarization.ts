@@ -15,21 +15,21 @@ export async function summarizeContent(
   logger.info("Starting content summarization", {
     bookmarkId,
     contentLength: content.length,
+    contentPreview: content.substring(0, 200),
   });
 
   try {
-    // Validate input
     if (!content || content.trim().length === 0) {
       throw new Error("Content cannot be empty");
     }
-
-    // Import AI service dynamically
     const { createSummarizationService } = await import("@favy/ai");
-
-    // Create service instance
     const summarizationService = createSummarizationService();
 
-    // Generate summary with keywords and tags
+    logger.info("Calling AI service for summarization", {
+      bookmarkId,
+      contentLength: content.length,
+    });
+
     const result = await summarizationService.generateSummary(content, {
       maxLength: parseInt(process.env.MAX_SUMMARY_LENGTH || "500"),
     });
@@ -69,10 +69,7 @@ export async function updateBookmarkSummary(
   });
 
   try {
-    // Import database client
     const prisma = (await import("@favy/db")).default;
-
-    // Update bookmark enrichment with summary data
     await prisma.bookmarkEnrichment.upsert({
       where: { bookmarkPostId: bookmarkId },
       create: {

@@ -1,6 +1,3 @@
-/**
- * Options for generating summaries
- */
 export interface SummaryOptions {
   maxLength?: number;
   keywordCount?: number;
@@ -8,42 +5,21 @@ export interface SummaryOptions {
   temperature?: number;
 }
 
-/**
- * Result from summarization operation
- */
 export interface SummaryResult {
   summary: string;
   keywords: string[];
-  tags: string[];
+  tags: Array<{ id: string; name: string }>;
   tokensUsed?: number;
 }
 
-/**
- * Service interface for AI-powered summarization
- */
 export interface SummarizationService {
-  /**
-   * Generate a summary with keywords and tags from content
-   */
   generateSummary(
     content: string,
     options?: SummaryOptions
   ): Promise<SummaryResult>;
-
-  /**
-   * Extract keywords from content
-   */
   extractKeywords(content: string, count?: number): Promise<string[]>;
-
-  /**
-   * Extract semantic tags from content
-   */
-  extractTags(content: string, count?: number): Promise<string[]>;
 }
 
-/**
- * Configuration for LM Studio client
- */
 export interface LMStudioConfig {
   apiUrl: string;
   model: string;
@@ -51,9 +27,6 @@ export interface LMStudioConfig {
   temperature: number;
 }
 
-/**
- * Error types for AI operations
- */
 export class AIServiceError extends Error {
   constructor(
     message: string,

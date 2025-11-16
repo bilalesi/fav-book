@@ -3,14 +3,18 @@ import type {
   BookmarkEnrichmentInput,
   BookmarkEnrichmentOutput,
 } from "../types";
-import { WorkflowStep, isRetryableError } from "../types";
+import { WorkflowStep } from "../types";
 import { getFeatureFlag } from "@favy/shared";
 import {
   createLogger,
   createWorkflowLogContext,
   PerformanceTimer,
 } from "../lib/logger";
-import { createWorkflowError, classifyError } from "../lib/errors";
+import {
+  createWorkflowError,
+  classifyError,
+  isRetryableError,
+} from "../lib/errors";
 
 /**
  * Main bookmark enrichment workflow
@@ -53,37 +57,61 @@ export const bookmarkEnrichmentWorkflow = task({
 
     try {
       // Step 1: Content Retrieval
-      const contentRetrievalTimer = new PerformanceTimer();
-      const stepStartTime = logger.stepStart(WorkflowStep.CONTENT_RETRIEVAL);
+      // const contentRetrievalTimer = new PerformanceTimer();
+      // const stepStartTime = logger.stepStart(WorkflowStep.CONTENT_RETRIEVAL);
       let fullContent = content;
 
-      try {
-        // Import content retrieval task dynamically to avoid circular dependencies
-        const { retrieveContent } = await import("../tasks/content-retrieval");
-        fullContent = await retrieveContent(url, platform, content);
+      // try {
+      //   // Import content retrieval task dynamically to avoid circular dependencies
+      //   const { retrieveContent } = await import("../tasks/content-retrieval");
+      //   const retrievedContent = await retrieveContent(url, platform, content);
 
-        logger.stepComplete(WorkflowStep.CONTENT_RETRIEVAL, stepStartTime, {
-          contentLength: fullContent.length,
-          originalLength: content.length,
-        });
+      //   // Only use retrieved content if it's different and longer than the original
+      //   // This ensures we don't use the same fallback content for all bookmarks
+      //   if (
+      //     retrievedContent &&
+      //     retrievedContent.length > content.length &&
+      //     retrievedContent !== content
+      //   ) {
+      //     fullContent = retrievedContent;
+      //     logger.info("Using retrieved content for enrichment", {
+      //       bookmarkId,
+      //       originalLength: content.length,
+      //       retrievedLength: retrievedContent.length,
+      //     });
+      //   } else {
+      //     logger.info("Using original content for enrichment", {
+      //       bookmarkId,
+      //       contentLength: content.length,
+      //       reason:
+      //         retrievedContent === content
+      //           ? "retrieved_same_as_original"
+      //           : "retrieved_shorter_than_original",
+      //     });
+      //   }
 
-        contentRetrievalTimer.logMetrics(logger, "content_retrieval");
-      } catch (error) {
-        const err = error as Error;
-        logger.stepFailed(WorkflowStep.CONTENT_RETRIEVAL, stepStartTime, err, {
-          originalContentLength: content.length,
-        });
+      //   logger.stepComplete(WorkflowStep.CONTENT_RETRIEVAL, stepStartTime, {
+      //     contentLength: fullContent.length,
+      //     originalLength: content.length,
+      //   });
 
-        // Non-critical error, continue with original content
-        result.errors?.push({
-          step: WorkflowStep.CONTENT_RETRIEVAL,
-          errorType: classifyError(err),
-          message: err.message,
-          timestamp: new Date(),
-          retryable: false,
-          stackTrace: err.stack,
-        });
-      }
+      //   contentRetrievalTimer.logMetrics(logger, "content_retrieval");
+      // } catch (error) {
+      //   const err = error as Error;
+      //   logger.stepFailed(WorkflowStep.CONTENT_RETRIEVAL, stepStartTime, err, {
+      //     originalContentLength: content.length,
+      //   });
+
+      //   // Non-critical error, continue with original content
+      //   result.errors?.push({
+      //     step: WorkflowStep.CONTENT_RETRIEVAL,
+      //     errorType: classifyError(err),
+      //     message: err.message,
+      //     timestamp: new Date(),
+      //     retryable: false,
+      //     stackTrace: err.stack,
+      //   });
+      // }
 
       // Step 2: AI Summarization
       const aiSummarizationEnabled = getFeatureFlag("ENABLE_AI_SUMMARIZATION");
@@ -99,14 +127,12 @@ export const bookmarkEnrichmentWorkflow = task({
             "../tasks/summarization"
           );
 
-          // Generate summary, keywords, and tags
           const summaryResult = await summarizeContent(fullContent, bookmarkId);
           result.summary = summaryResult.summary;
           result.keywords = summaryResult.keywords;
           result.tags = summaryResult.tags;
           result.tokensUsed = summaryResult.tokensUsed;
 
-          // Update bookmark with summary data
           await updateBookmarkSummary(bookmarkId, summaryResult);
 
           logger.stepComplete(WorkflowStep.SUMMARIZATION, stepStartTime, {

@@ -20,7 +20,7 @@ export async function updateBookmarkEnrichment(
   data: {
     summary?: string;
     keywords?: string[];
-    tags?: string[];
+    tags?: Array<{ id: string; name: string }>;
     status: ProcessingStatus;
     errors?: WorkflowError[];
   }
@@ -36,39 +36,47 @@ export async function updateBookmarkEnrichment(
   });
 
   try {
-    // Import database client
     const prisma = (await import("@favy/db")).default;
 
-    // Prepare error message if any errors exist
     const errorMessage = data.errors
       ?.map((e) => `[${e.step}] ${e.message}`)
       .join("; ");
 
-    // Upsert bookmark enrichment data
-    await prisma.bookmarkEnrichment.upsert({
-      where: { bookmarkPostId: bookmarkId },
-      create: {
-        bookmarkPostId: bookmarkId,
-        summary: data.summary,
-        keywords: data.keywords,
-        tags: data.tags,
-        processingStatus: data.status,
-        workflowId,
-        enrichedAt: new Date(),
-        errorMessage: errorMessage || null,
-      },
-      update: {
-        summary: data.summary,
-        keywords: data.keywords,
-        tags: data.tags,
-        processingStatus: data.status,
-        workflowId,
-        enrichedAt: new Date(),
-        errorMessage: errorMessage || null,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.bookmarkEnrichment.upsert({
+        where: { bookmarkPostId: bookmarkId },
+        create: {
+          bookmarkPostId: bookmarkId,
+          summary: data.summary,
+          keywords: data.keywords,
+          tags: data.tags?.map((o) => o.name),
+          processingStatus: data.status,
+          workflowId,
+          enrichedAt: new Date(),
+          errorMessage: errorMessage || null,
+        },
+        update: {
+          summary: data.summary,
+          keywords: data.keywords,
+          tags: data.tags?.map((o) => o.name),
+          processingStatus: data.status,
+          workflowId,
+          enrichedAt: new Date(),
+          errorMessage: errorMessage || null,
+        },
+      });
+      if (!!data.tags?.length) {
+        await tx.bookmarkPostCategory.createMany({
+          data: data.tags?.map((o) => ({
+            bookmarkPostId: bookmarkId,
+            categoryId: o.id,
+            assignedAt: new Date(),
+          })),
+          skipDuplicates: true,
+        });
+      }
     });
 
-    // Persist detailed error logs if any errors exist
     if (data.errors && data.errors.length > 0) {
       await logWorkflowErrors(bookmarkId, workflowId, data.errors);
     }

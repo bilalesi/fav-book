@@ -137,6 +137,7 @@
       "name": "@favy/ai",
       "dependencies": {
         "@ai-sdk/openai-compatible": "^1.0.27",
+        "@favy/db": "workspace:*",
         "ai": "^5.0.93",
         "dotenv": "catalog:",
         "zod": "catalog:",

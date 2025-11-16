@@ -1,5 +1,5 @@
-import { orpc, client } from "@/utils/orpc";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { orpc, client } from "@/utils/orpc";
 
 /**
  * Hook to fetch all collections

@@ -1,14 +1,39 @@
 // Enums
-export type Platform = "TWITTER" | "LINKEDIN" | "GENERIC_URL";
-export type MediaType = "IMAGE" | "VIDEO" | "LINK";
-export type ProcessingStatus =
-  | "PENDING"
-  | "PROCESSING"
-  | "COMPLETED"
-  | "PARTIAL_SUCCESS"
-  | "FAILED";
-export type DownloadStatus = "PENDING" | "DOWNLOADING" | "COMPLETED" | "FAILED";
+// Define the dictionaries
+export const DictPlatform = {
+  TWITTER: "TWITTER",
+  LINKEDIN: "LINKEDIN",
+  GENERIC_URL: "GENERIC_URL",
+} as const;
 
+export const DictMediaType = {
+  IMAGE: "IMAGE",
+  VIDEO: "VIDEO",
+  LINK: "LINK",
+} as const;
+
+export const DictProcessingStatus = {
+  PENDING: "PENDING",
+  PROCESSING: "PROCESSING",
+  COMPLETED: "COMPLETED",
+  PARTIAL_SUCCESS: "PARTIAL_SUCCESS",
+  FAILED: "FAILED",
+} as const;
+
+export const DictDownloadStatus = {
+  PENDING: "PENDING",
+  DOWNLOADING: "DOWNLOADING",
+  COMPLETED: "COMPLETED",
+  FAILED: "FAILED",
+} as const;
+
+// Derive types from the dictionaries
+export type Platform = (typeof DictPlatform)[keyof typeof DictPlatform];
+export type MediaType = (typeof DictMediaType)[keyof typeof DictMediaType];
+export type ProcessingStatus =
+  (typeof DictProcessingStatus)[keyof typeof DictProcessingStatus];
+export type DownloadStatus =
+  (typeof DictDownloadStatus)[keyof typeof DictDownloadStatus];
 // Core entities
 export interface BookmarkPost {
   id: string;

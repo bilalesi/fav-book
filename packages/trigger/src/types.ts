@@ -115,14 +115,10 @@ export interface UploadResult {
  * Summary result from AI service
  */
 export interface SummaryResult {
-  /** Generated summary text */
   summary: string;
-  /** Extracted keywords */
   keywords: string[];
-  /** Extracted tags */
-  tags: string[];
-  /** Number of tokens used */
-  tokensUsed: number;
+  tags: Array<{ id: string; name: string }>;
+  tokensUsed?: number;
 }
 
 /**
@@ -156,7 +152,7 @@ export interface BookmarkEnrichmentOutput {
   /** Extracted keywords from the content */
   keywords?: string[];
   /** Extracted semantic tags for categorization */
-  tags?: string[];
+  tags?: Array<{ id: string; name: string }>;
   /** Metadata for downloaded media files */
   mediaMetadata?: MediaMetadata[];
   /** Errors encountered during workflow execution */

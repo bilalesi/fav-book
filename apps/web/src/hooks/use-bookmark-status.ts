@@ -1,41 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { client } from "@/utils/orpc";
-import type { DownloadStatus, MediaType, ProcessingStatus } from "@favy/shared";
 
-type EnrichedBookmark = {
-  bookmarkId: string;
-  processingStatus: ProcessingStatus;
-  workflowId: string | null | undefined;
-  summary: string | null | undefined;
-  keywords: string[] | undefined;
-  tags: string[] | undefined;
-  enrichedAt: Date | null | undefined;
-  errorMessage: string | null | undefined;
-  downloadedMedia: {
-    id: string;
-    type: MediaType;
-    downloadStatus: DownloadStatus;
-    storageUrl: string | null;
-    fileSize: string;
-    duration: number | null;
-    quality: string | null;
-    format: string | null;
-    errorMessage: string | null;
-  }[];
-};
+import { DictProcessingStatus } from "@favy/shared";
+import type { ProcessingStatus } from "@favy/shared";
 
 interface UseBookmarkStatusOptions {
   bookmarkId: string;
   initialStatus?: ProcessingStatus;
   enabled?: boolean;
   pollingInterval?: number;
-}
-
-interface BookmarkStatusResult {
-  status: ProcessingStatus;
-  data?: EnrichedBookmark | null;
-  isPolling: boolean;
-  refetch: () => void;
 }
 
 /**
@@ -47,13 +20,8 @@ export function useBookmarkStatus({
   bookmarkId,
   initialStatus,
   enabled = true,
-}: UseBookmarkStatusOptions): BookmarkStatusResult {
-  // Determine if we should poll based on current status
-  const shouldPoll =
-    enabled && (status === "PROCESSING" || status === "PENDING");
-
-  // Query for bookmark enrichment status
-  const { data, refetch } = useQuery({
+}: UseBookmarkStatusOptions) {
+  const { data, refetch, isEnabled } = useQuery({
     queryKey: ["bookmarks", "enrichment-status", bookmarkId],
     queryFn: async () => {
       try {
@@ -66,21 +34,26 @@ export function useBookmarkStatus({
         return null;
       }
     },
-    enabled: enabled && shouldPoll,
+    enabled: (data) =>
+      enabled &&
+      (data.state.data?.processingStatus === DictProcessingStatus.PROCESSING ||
+        data.state.data?.processingStatus === DictProcessingStatus.PENDING),
     refetchInterval: (data) => {
-      // Poll every 10 seconds if processing
-      if (data.state.data?.processingStatus === "PROCESSING") {
+      if (
+        data.state.data?.processingStatus === DictProcessingStatus.PROCESSING
+      ) {
         return 10000;
       }
       return false;
     },
     refetchIntervalInBackground: false,
-    staleTime: 5000, // Consider data stale after 5 seconds
+    staleTime: 5000,
   });
 
   return {
-    status: data?.processingStatus ?? initialStatus ?? "PENDING",
-    isPolling: shouldPoll,
+    status:
+      data?.processingStatus ?? initialStatus ?? DictProcessingStatus.PENDING,
+    isPolling: isEnabled,
     refetch,
     data,
   };

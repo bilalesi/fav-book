@@ -91,8 +91,12 @@ export function BookmarkCardUrl({ bookmark }: BookmarkCardUrlProps) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setIsEditDialogOpen(true)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsEditDialogOpen(true);
+          }}
           className="flex items-center gap-1"
+          data-interactive="true"
         >
           <Pencil className="h-3 w-3" />
           Edit
@@ -100,8 +104,12 @@ export function BookmarkCardUrl({ bookmark }: BookmarkCardUrlProps) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => setIsDeleteDialogOpen(true)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsDeleteDialogOpen(true);
+          }}
           className="flex items-center gap-1 text-destructive hover:text-destructive"
+          data-interactive="true"
         >
           <Trash2 className="h-3 w-3" />
           Delete
@@ -112,7 +120,13 @@ export function BookmarkCardUrl({ bookmark }: BookmarkCardUrlProps) {
           asChild
           className="flex items-center gap-1"
         >
-          <a href={bookmark.postUrl} target="_blank" rel="noopener noreferrer">
+          <a
+            href={bookmark.postUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-interactive="true"
+            onClick={(e) => e.stopPropagation()}
+          >
             <ExternalLink className="h-3 w-3" />
             Open
           </a>
@@ -142,6 +156,8 @@ export function BookmarkCardUrl({ bookmark }: BookmarkCardUrlProps) {
       rel="noopener noreferrer"
       className="text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring rounded p-1"
       aria-label="Open URL in new tab"
+      data-interactive="true"
+      onClick={(e) => e.stopPropagation()}
     >
       <ExternalLink className="h-4 w-4" aria-hidden="true" />
     </a>

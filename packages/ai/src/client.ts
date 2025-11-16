@@ -1,7 +1,4 @@
-import {
-  createOpenAICompatible,
-  OpenAICompatibleChatLanguageModel,
-} from "@ai-sdk/openai-compatible";
+import { OpenAICompatibleChatLanguageModel } from "@ai-sdk/openai-compatible";
 import type { LMStudioConfig, AIServiceError } from "./types";
 
 /**
@@ -16,23 +13,15 @@ export function getLMStudioConfig(): LMStudioConfig {
   };
 }
 
-/**
- * Create an OpenAI-compatible client configured for LM Studio
- */
 export function createLMStudioClient(config?: Partial<LMStudioConfig>) {
   const fullConfig = {
     ...getLMStudioConfig(),
     ...config,
   };
 
-  // const model = createOpenAICompatible({
-  //   name: "lmstudio",
-  //   baseURL: fullConfig.apiUrl,
-  // }).chatModel(process.env.LM_STUDIO_MODEL || "llama-3.2-3b-instruct");
   const model = new OpenAICompatibleChatLanguageModel(
     process.env.LM_STUDIO_MODEL || "llama-3.2-3b-instruct",
     {
-      // <-- Second parameter, not third
       provider: `lmstudio.chat`,
       url: ({ path }) => {
         const url = new URL(`${fullConfig.apiUrl}${path}`);
@@ -40,16 +29,12 @@ export function createLMStudioClient(config?: Partial<LMStudioConfig>) {
       },
       headers: () => ({}),
       supportsStructuredOutputs: true,
-      // 'defaultObjectGenerationMode' doesn't seem to be a valid option anymore
     }
   );
 
   return model;
 }
 
-/**
- * Validate connection to LM Studio
- */
 export async function validateLMStudioConnection(
   config?: Partial<LMStudioConfig>
 ): Promise<boolean> {
@@ -59,7 +44,6 @@ export async function validateLMStudioConnection(
       ...config,
     };
 
-    // Try to fetch models endpoint to verify connection
     const response = await fetch(`${fullConfig.apiUrl}/models`, {
       method: "GET",
       headers: {
@@ -100,9 +84,6 @@ export async function validateLMStudioConnection(
   }
 }
 
-/**
- * Check if an error is retryable
- */
 export function isRetryableError(error: unknown): boolean {
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
@@ -136,9 +117,6 @@ export function isRetryableError(error: unknown): boolean {
   return false;
 }
 
-/**
- * Create an AIServiceError from an unknown error
- */
 export function createAIServiceError(
   error: unknown,
   context: string

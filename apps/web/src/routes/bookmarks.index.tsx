@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { BookmarkFilters } from "@/components/bookmark-filters";
-import { BookmarkCard } from "@/components/bookmark-card";
+import { SelectableBookmarkCard } from "@/components/selectable-bookmark-card";
 import { useBookmarksList } from "@/hooks/use-bookmarks";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -481,19 +481,14 @@ function BookmarksListPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-fr">
             {bookmarks.map((bookmark) => (
-              <div key={bookmark.id} className="relative">
-                <div className="absolute top-2 left-2 z-10">
-                  <Checkbox
-                    checked={selectedBookmarkIds.has(bookmark.id)}
-                    onCheckedChange={() => handleSelectBookmark(bookmark.id)}
-                    aria-label={`Select bookmark ${bookmark.id}`}
-                    className="bg-background border-2"
-                  />
-                </div>
-                <BookmarkCard bookmark={bookmark} />
-              </div>
+              <SelectableBookmarkCard
+                key={bookmark.id}
+                bookmark={bookmark}
+                isSelected={selectedBookmarkIds.has(bookmark.id)}
+                onSelectionToggle={handleSelectBookmark}
+              />
             ))}
           </div>
 
