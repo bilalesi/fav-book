@@ -1,25 +1,12 @@
 import { z } from "zod";
-import { protectedProcedure, publicProcedure } from "../index";
+import { publicProcedure } from "../index";
 import prisma from "@favy/db";
-import { getMetrics, getMetricsJSON } from "@favy/trigger/lib/metrics";
-import { metricsTracker } from "@favy/trigger/lib/metrics-tracker";
-import { testAlert, evaluateAllAlerts } from "@favy/trigger/lib/alerting";
 
 /**
  * Monitoring API router
  * Provides endpoints for metrics, dashboard data, and alerting
  */
 export const monitoringRouter = {
-  // Get Prometheus metrics
-  metrics: publicProcedure.handler(async () => {
-    return await getMetrics();
-  }),
-
-  // Get metrics as JSON
-  metricsJson: publicProcedure.handler(async () => {
-    return await getMetricsJSON();
-  }),
-
   // Get dashboard statistics
   dashboard: publicProcedure.handler(async () => {
     const now = new Date();
@@ -37,16 +24,12 @@ export const monitoringRouter = {
         getQueueDepth(),
       ]);
 
-    // Get current window stats from metrics tracker
-    const currentWindow = metricsTracker.getStats();
-
     return {
       today: todayStats,
       week: weekStats,
       month: monthStats,
       active: activeCount,
       queue: queueDepth,
-      currentWindow,
     };
   }),
 
@@ -232,22 +215,10 @@ export const monitoringRouter = {
       };
     }),
 
-  // Test alert delivery
-  testAlert: publicProcedure.handler(async () => {
-    await testAlert();
-    return { success: true, message: "Test alert sent" };
-  }),
-
-  // Manually trigger alert evaluation
-  evaluateAlerts: publicProcedure.handler(async () => {
-    await evaluateAllAlerts();
-    return { success: true, message: "Alert evaluation completed" };
-  }),
-
   // Get system health
   health: publicProcedure.handler(async () => {
     const checks = await Promise.allSettled([
-      checkTriggerDevHealth(),
+      checkRestateHealth(),
       checkLMStudioHealth(),
       checkCobaltHealth(),
       checkStorageHealth(),
@@ -255,7 +226,7 @@ export const monitoringRouter = {
     ]);
 
     const health = {
-      triggerDev: getCheckResult(checks[0]),
+      restate: getCheckResult(checks[0]),
       lmStudio: getCheckResult(checks[1]),
       cobalt: getCheckResult(checks[2]),
       storage: getCheckResult(checks[3]),
@@ -269,6 +240,45 @@ export const monitoringRouter = {
       services: health,
       timestamp: new Date(),
     };
+  }),
+
+  // Get Restate workflow statistics
+  restateStats: publicProcedure.handler(async () => {
+    try {
+      const restateAdminUrl =
+        process.env.RESTATE_ADMIN_ENDPOINT || "http://localhost:9070";
+
+      // Get deployments
+      const deploymentsRes = await fetch(`${restateAdminUrl}/deployments`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      const deploymentsData: any = deploymentsRes.ok
+        ? await deploymentsRes.json()
+        : { deployments: [] };
+
+      // Get services
+      const servicesRes = await fetch(`${restateAdminUrl}/services`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      const servicesData: any = servicesRes.ok
+        ? await servicesRes.json()
+        : { services: [] };
+
+      return {
+        deployments: deploymentsData.deployments || [],
+        services: servicesData.services || [],
+        deploymentsCount: deploymentsData.deployments?.length || 0,
+        servicesCount: servicesData.services?.length || 0,
+      };
+    } catch (error) {
+      return {
+        deployments: [],
+        services: [],
+        deploymentsCount: 0,
+        servicesCount: 0,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
   }),
 };
 
@@ -441,17 +451,15 @@ function getMaxStorageBytes(): number {
   return maxGB * 1024 * 1024 * 1024;
 }
 
-async function checkTriggerDevHealth(): Promise<boolean> {
+async function checkRestateHealth(): Promise<boolean> {
   try {
-    const apiUrl = process.env.TRIGGER_API_URL;
-    if (!apiUrl) return false;
+    const restateAdminUrl =
+      process.env.RESTATE_ADMIN_ENDPOINT || "http://localhost:9070";
 
-    // Try to reach the base URL instead of the health endpoint which requires auth
-    const response = await fetch(apiUrl, {
+    const response = await fetch(`${restateAdminUrl}/health`, {
       signal: AbortSignal.timeout(5000),
     });
-    // Accept any response (including redirects) as a sign the service is up
-    return response.status < 500;
+    return response.ok;
   } catch {
     return false;
   }

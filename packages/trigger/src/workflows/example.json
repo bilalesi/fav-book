@@ -1,0 +1,108 @@
+{
+    "platform": "TWITTER",
+    "exportDate": "2025-11-14T20:17:51.391Z",
+    "totalCount": 1434,
+    "bookmarks": [
+        {
+            "postId": "1989237111745310770",
+            "postUrl": "https://x.com/getpy/status/1989237111745310770",
+            "content": "Google launched codewiki \n\nAsk questions about your software architecture, find function definitions, and understand complex logic in natural language. It's like having an engineer on call, 24/7.\n\nI tested it for DSPy and it's spot on in it's responses",
+            "author": {
+                "name": "Ankur Gupta",
+                "username": "getpy",
+                "profileUrl": "https://x.com/getpy"
+            },
+            "media": [
+                {
+                    "type": "image",
+                    "url": "https://pbs.twimg.com/media/G5swm55aYAAZFej",
+                    "thumbnailUrl": "https://pbs.twimg.com/media/G5swm55aYAAZFej?format=jpg&name=medium"
+                }
+            ],
+            "timestamp": "2025-11-14T07:41:00.000Z",
+            "metadata": {
+                "replyCount": "19 Replies. Reply",
+                "retweetCount": "103 reposts. Repost",
+                "likeCount": "1193 Likes. Like",
+                "extractedAt": "2025-11-14T20:12:10.851Z"
+            }
+        },
+        {
+            "postId": "1989272092223975500",
+            "postUrl": "https://x.com/bibryam/status/1989272092223975500",
+            "content": "Weaviate's 𝗖𝗼𝗻𝘁𝗲𝘅𝘁 𝗘𝗻𝗴𝗶𝗻𝗲𝗲𝗿𝗶𝗻𝗴 is one of the most comprehensive guides I’ve seen. Covers:\n \n→ Agents – strategies, context window challenges\n→ Query Augmentation – rewriting, expansion, and decomposition\n→ Retrieval – how chunking and pre/post-processing",
+            "author": {
+                "name": "Bilgin Ibryam",
+                "username": "bibryam",
+                "profileUrl": "https://x.com/bibryam"
+            },
+            "media": [
+                {
+                    "type": "image",
+                    "url": "https://pbs.twimg.com/media/G5oHBNeXYAApW3-",
+                    "thumbnailUrl": "https://pbs.twimg.com/media/G5oHBNeXYAApW3-?format=jpg&name=medium"
+                }
+            ],
+            "timestamp": "2025-11-14T10:00:00.000Z",
+            "metadata": {
+                "replyCount": "0 Replies. Reply",
+                "retweetCount": "35 reposts. Repost",
+                "likeCount": "251 Likes. Like",
+                "extractedAt": "2025-11-14T20:12:10.851Z"
+            }
+        },
+        {
+            "postId": "1964743358288716021",
+            "postUrl": "https://x.com/BHolmesDev/status/1964743358288716021",
+            "content": "Man, I forgot how good this feels. @biomejs even supports React Refresh rules now. Down with eslint!",
+            "author": {
+                "name": "Ben Holmes",
+                "username": "BHolmesDev",
+                "profileUrl": "https://x.com/BHolmesDev"
+            },
+            "media": [
+                {
+                    "type": "image",
+                    "url": "https://pbs.twimg.com/media/G0QrR6_XAAAkX-R",
+                    "thumbnailUrl": "https://pbs.twimg.com/media/G0QrR6_XAAAkX-R?format=png&name=medium"
+                }
+            ],
+            "timestamp": "2025-09-07T17:31:34.000Z",
+            "metadata": {
+                "replyCount": "34 Replies. Reply",
+                "retweetCount": "34 reposts. Repost",
+                "likeCount": "817 Likes. Like",
+                "extractedAt": "2025-11-14T20:12:10.851Z"
+            }
+        },
+        {
+            "postId": "1987829097049821266",
+            "postUrl": "https://x.com/educalvolpz/status/1987829097049821266",
+            "content": "SmoothUI just got a big update \n◆ Migrated to Next.js 16\n◆ Switched to Ultracite + Biome (goodbye ESLint & Prettier )\n◆ Brand-new docs powered by Fumadocs — faster, smarter & more interactive\n◆ Improved components & blocks (now full-screen previews + breakpoint views)\n◆",
+            "author": {
+                "name": "Edu Calvo",
+                "username": "educalvolpz",
+                "profileUrl": "https://x.com/educalvolpz"
+            },
+            "media": [
+                {
+                    "type": "image",
+                    "url": "https://pbs.twimg.com/amplify_video_thumb/1987825934636855296/img/xSIBNmQIb-GutEQ_.jpg",
+                    "thumbnailUrl": "https://pbs.twimg.com/amplify_video_thumb/1987825934636855296/img/xSIBNmQIb-GutEQ_.jpg"
+                },
+                {
+                    "type": "video",
+                    "url": "https://pbs.twimg.com/amplify_video_thumb/1987825934636855296/img/xSIBNmQIb-GutEQ_.jpg",
+                    "thumbnailUrl": "https://pbs.twimg.com/amplify_video_thumb/1987825934636855296/img/xSIBNmQIb-GutEQ_.jpg"
+                }
+            ],
+            "timestamp": "2025-11-10T10:26:03.000Z",
+            "metadata": {
+                "replyCount": "7 Replies. Reply",
+                "retweetCount": "15 reposts. Repost",
+                "likeCount": "214 Likes. Like",
+                "extractedAt": "2025-11-14T20:12:10.851Z"
+            }
+        }
+    ]
+}

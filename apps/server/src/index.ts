@@ -272,6 +272,27 @@ const app = new Elysia()
     console.log("📚 API Documentation: http://localhost:3000/api-reference");
     console.log("🔐 Auth endpoints: http://localhost:3000/api/auth/*");
     console.log("");
+
+    // Log active workflow engine configuration
+    const workflowEngine = process.env.WORKFLOW_ENGINE || "restate";
+    console.log("⚙️  Workflow Configuration:");
+    console.log(`  - Engine: ${workflowEngine}`);
+
+    if (workflowEngine === "restate") {
+      const ingressUrl =
+        process.env.RESTATE_INGRESS_URL || "http://localhost:8080";
+      const adminUrl = process.env.RESTATE_ADMIN_URL || "http://localhost:9070";
+      console.log(`  - Restate Ingress: ${ingressUrl}`);
+      console.log(`  - Restate Admin: ${adminUrl}`);
+    } else if (workflowEngine === "trigger") {
+      console.log(
+        `  - Trigger.dev API: ${
+          process.env.TRIGGER_API_URL || "https://api.trigger.dev"
+        }`
+      );
+    }
+
+    console.log("");
     console.log("Available auth endpoints:");
     console.log("  - POST /api/auth/sign-in/email - Email/password sign in");
     console.log("  - POST /api/auth/sign-up/email - Email/password sign up");

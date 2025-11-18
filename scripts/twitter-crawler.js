@@ -15,7 +15,7 @@
  * IMPORTANT: Keep the browser tab active while the script runs.
  */
 
-(async function() {
+(async function () {
   'use strict';
 
   // Configuration
@@ -89,7 +89,8 @@
 
       // Extract tweet text
       const tweetTextElement = article.querySelector('[data-testid="tweetText"]');
-      const content = tweetTextElement?.textContent || '';
+      let content = tweetTextElement?.textContent || '';
+      const lang = tweetTextElement?.getAttribute('lang') || '';
 
       // Extract timestamp
       const timeElement = article.querySelector('time');
@@ -97,7 +98,7 @@
 
       // Extract media (images and videos)
       const media = [];
-      
+
       // Images
       const images = article.querySelectorAll('[data-testid="tweetPhoto"] img');
       images.forEach(img => {
@@ -140,16 +141,16 @@
         // Get the link from the card
         const cardLink = card.querySelector('a[href^="http"]');
         const cardUrl = cardLink?.href;
-        
+
         if (cardUrl && !cardUrl.includes('twitter.com') && !cardUrl.includes('x.com')) {
           // Get the card image
           const cardImage = card.querySelector('img');
           const cardImageUrl = cardImage?.src;
-          
+
           // Get the card title and description
           const cardTitle = card.querySelector('[dir="ltr"]')?.textContent || '';
           const cardDescription = card.querySelector('[data-testid="card.layoutLarge.detail"] > div:last-child')?.textContent || '';
-          
+
           media.push({
             type: 'LINK',
             url: cardUrl,
@@ -159,6 +160,11 @@
               description: cardDescription
             }
           });
+
+          // If content is empty, use the card URL as content
+          if (!content.trim()) {
+            content = cardUrl;
+          }
         }
       });
 
@@ -172,6 +178,11 @@
             url: url
           });
         }
+
+        // If content is empty (and we haven't filled it with a card URL yet), use this link
+        if (!content.trim()) {
+          content = url;
+        }
       });
 
       // Construct tweet URL
@@ -181,6 +192,19 @@
       const replyCount = article.querySelector('[data-testid="reply"]')?.getAttribute('aria-label') || '0';
       const retweetCount = article.querySelector('[data-testid="retweet"]')?.getAttribute('aria-label') || '0';
       const likeCount = article.querySelector('[data-testid="like"]')?.getAttribute('aria-label') || '0';
+
+      // Extract view count (analytics)
+      // View count is often in a link with href ending in /analytics
+      const analyticsLink = article.querySelector('a[href$="/analytics"]');
+      let viewCount = '0';
+      if (analyticsLink) {
+        // Try to get the text content or aria-label
+        viewCount = analyticsLink.getAttribute('aria-label') || analyticsLink.textContent || '0';
+      }
+
+      // Extract mentions and hashtags from content
+      const mentions = (content.match(/@\w+/g) || []).map(m => m.substring(1));
+      const hashtags = (content.match(/#\w+/g) || []).map(h => h.substring(1));
 
       const tweetData = {
         postId: tweetId,
@@ -197,6 +221,10 @@
           replyCount: replyCount,
           retweetCount: retweetCount,
           likeCount: likeCount,
+          viewCount: viewCount,
+          lang: lang,
+          mentions: mentions,
+          hashtags: hashtags,
           extractedAt: new Date().toISOString()
         }
       };
@@ -225,45 +253,45 @@
 
   async function scrollToLoadMore() {
     const previousCount = extractedTweets.size;
-    
+
     // Scroll to bottom
     window.scrollTo(0, document.body.scrollHeight);
-    
+
     // Wait for content to load
     await new Promise(resolve => setTimeout(resolve, CONFIG.scrollDelay));
-    
+
     // Extract newly loaded tweets
     await new Promise(resolve => setTimeout(resolve, CONFIG.extractDelay));
     const newTweets = extractAllVisibleTweets();
-    
+
     const currentCount = extractedTweets.size;
-    
+
     if (currentCount === previousCount) {
       noNewContentCount++;
     } else {
       noNewContentCount = 0;
     }
-    
+
     scrollAttempts++;
     updateProgress('Scrolling...', currentCount);
-    
+
     // Check stopping conditions
     if (noNewContentCount >= CONFIG.noNewContentLimit) {
       console.log('No new content found after', CONFIG.noNewContentLimit, 'attempts. Stopping.');
       return false;
     }
-    
+
     if (scrollAttempts >= CONFIG.maxScrollAttempts) {
       console.log('Maximum scroll attempts reached. Stopping.');
       return false;
     }
-    
+
     return true;
   }
 
   function generateJSON() {
     const bookmarks = Array.from(extractedTweets.values());
-    
+
     return {
       platform: 'twitter',
       exportDate: new Date().toISOString(),
@@ -276,7 +304,7 @@
     const jsonString = JSON.stringify(data, null, 2);
     const blob = new Blob([jsonString], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    
+
     const a = document.createElement('a');
     a.href = url;
     a.download = `twitter-bookmarks-${new Date().toISOString().split('T')[0]}.json`;
@@ -289,7 +317,7 @@
   // Main execution
   console.log('🐦 Twitter Bookmarks Crawler Started');
   console.log('Keep this tab active and wait for completion...');
-  
+
   updateProgress('Initializing...', 0);
 
   try {
@@ -306,7 +334,7 @@
 
     // Final extraction
     extractAllVisibleTweets();
-    
+
     isRunning = false;
     updateProgress('Complete!', extractedTweets.size);
 
@@ -317,7 +345,7 @@
     console.log('✓ Extraction complete!');
     console.log('Total tweets extracted:', extractedTweets.size);
     console.log('JSON file downloaded successfully');
-    
+
     // Show completion message
     setTimeout(() => {
       progressDiv.innerHTML += `

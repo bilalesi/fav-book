@@ -164,6 +164,7 @@
       "dependencies": {
         "@favy/auth": "workspace:*",
         "@favy/db": "workspace:*",
+        "@favy/restate": "workspace:*",
         "@favy/shared": "workspace:*",
         "@favy/trigger": "workspace:*",
         "@orpc/client": "catalog:",
@@ -224,6 +225,27 @@
       "dependencies": {
         "axios": "^1.13.2",
         "dotenv": "catalog:",
+      },
+      "devDependencies": {
+        "tsdown": "catalog:",
+      },
+      "peerDependencies": {
+        "typescript": "^5",
+      },
+    },
+    "packages/restate": {
+      "name": "@favy/restate",
+      "dependencies": {
+        "@favy/ai": "workspace:*",
+        "@favy/db": "workspace:*",
+        "@favy/media-downloader": "workspace:*",
+        "@favy/shared": "workspace:*",
+        "@favy/storage": "workspace:*",
+        "@favy/trigger": "workspace:*",
+        "@restatedev/restate-sdk": "^1.3.3",
+        "@restatedev/restate-sdk-clients": "^1.3.3",
+        "dotenv": "catalog:",
+        "zod": "catalog:",
       },
       "devDependencies": {
         "tsdown": "catalog:",
@@ -615,6 +637,8 @@
     "@favy/db": ["@favy/db@workspace:packages/db"],
 
     "@favy/media-downloader": ["@favy/media-downloader@workspace:packages/media-downloader"],
+
+    "@favy/restate": ["@favy/restate@workspace:packages/restate"],
 
     "@favy/shared": ["@favy/shared@workspace:packages/shared"],
 
@@ -1113,6 +1137,12 @@
     "@react-email/text": ["@react-email/text@0.0.11", "", { "peerDependencies": { "react": "^18.0 || ^19.0 || ^19.0.0-rc" } }, "sha512-a7nl/2KLpRHOYx75YbYZpWspUbX1DFY7JIZbOv5x0QU8SvwDbJt+Hm01vG34PffFyYvHEXrc6Qnip2RTjljNjg=="],
 
     "@remix-run/node-fetch-server": ["@remix-run/node-fetch-server@0.8.1", "", {}, "sha512-J1dev372wtJqmqn9U/qbpbZxbJSQrogNN2+Qv1lKlpATpe/WQ9aCZfl/xSb9d2Rgh1IyLSvNxZAXPZxruO6Xig=="],
+
+    "@restatedev/restate-sdk": ["@restatedev/restate-sdk@1.9.1", "", { "dependencies": { "@restatedev/restate-sdk-core": "^1.9.1" } }, "sha512-8w6t7cG5mXMgI+YPxIuPuplVX12lKbgne1byzmkQtif9lpPT6gjd7ce1EmWrUtsD25WCL+lf4iKU/usfqaXQCg=="],
+
+    "@restatedev/restate-sdk-clients": ["@restatedev/restate-sdk-clients@1.9.1", "", { "dependencies": { "@restatedev/restate-sdk-core": "^1.9.1" } }, "sha512-dOZVBDVvjK8SwgTPwMM5UYYXTU+8BHk4D9QTtDUYca/lOgVAIHoQEPy5e50UJ+/cCo6NouD9lmIC+6qKbN3dsA=="],
+
+    "@restatedev/restate-sdk-core": ["@restatedev/restate-sdk-core@1.9.1", "", {}, "sha512-/ISSWBF0YAH0mhIhnd6VFuFLMp6AckdfGyfU+CdJDccysxH1qp0QuI5oJ5UArexoFTI6LXrWkYg2/nZebO96gA=="],
 
     "@rolldown/binding-android-arm64": ["@rolldown/binding-android-arm64@1.0.0-beta.45", "", { "os": "android", "cpu": "arm64" }, "sha512-bfgKYhFiXJALeA/riil908+2vlyWGdwa7Ju5S+JgWZYdR4jtiPOGdM6WLfso1dojCh+4ZWeiTwPeV9IKQEX+4g=="],
 

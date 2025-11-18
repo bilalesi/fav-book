@@ -41,6 +41,16 @@
                 "content/styles.css"
             ],
             "run_at": "document_idle"
+        },
+        {
+            "matches": [
+                "http://localhost:3001/*",
+                "https://fav-book.vercel.app/*"
+            ],
+            "js": [
+                "content/webapp.js"
+            ],
+            "run_at": "document_idle"
         }
     ],
     "action": {

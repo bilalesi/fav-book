@@ -1,12 +1,17 @@
 import { protectedProcedure } from "../index";
 import { z } from "zod";
-import prisma, { Prisma } from "@favy/db";
+import prisma, { Prisma, ProcessingStatus } from "@favy/db";
 import { validateAndNormalizeUrl } from "../lib/url-normalizer";
 import { extractMetadata } from "../lib/metadata-extractor";
-import { tasks } from "@trigger.dev/sdk/v3";
 import type { BookmarkEnrichmentInput } from "@favy/trigger";
 import { isEnrichmentEnabled, isMediaDownloadEnabled } from "../lib/utils";
 import { Prisma as PrismaType } from "@prisma/client";
+import { createWorkflowClient } from "../lib/workflow-factory";
+import {
+  DictPlatform,
+  DictProcessingStatus,
+  type Platform,
+} from "@favy/shared";
 
 const platformSchema = z.enum(["TWITTER", "LINKEDIN", "GENERIC_URL"]);
 const mediaTypeSchema = z.enum(["IMAGE", "VIDEO", "LINK"]);
@@ -49,7 +54,6 @@ const bookmarkFiltersSchema = z.object({
   authorUsername: z.string().optional(),
   categoryIds: z.array(z.string()).optional(),
   collectionId: z.string().optional(),
-  // New fields for enhanced filtering
   platforms: z.array(platformSchema).optional(),
   authorUsernameContains: z.string().optional(),
   createdAtFrom: z.coerce.date().optional(),
@@ -92,16 +96,14 @@ const bulkImportSchema = z.object({
   bookmarks: z.array(bookmarkImportDataSchema),
 });
 
-// Helper function to spawn enrichment workflow
 async function spawnEnrichmentWorkflow(
   bookmarkId: string,
   userId: string,
-  platform: string,
+  platform: Platform,
   url: string,
   content: string
 ): Promise<string | null> {
   try {
-    // Check if enrichment is enabled via feature flags
     if (!isEnrichmentEnabled()) {
       console.log(
         `[Enrichment] Skipped for bookmark ${bookmarkId} - enrichment disabled`
@@ -112,14 +114,14 @@ async function spawnEnrichmentWorkflow(
     const payload: BookmarkEnrichmentInput = {
       bookmarkId,
       userId,
-      platform: platform as "TWITTER" | "LINKEDIN" | "GENERIC_URL",
+      platform,
       url,
       content,
       enableMediaDownload: isMediaDownloadEnabled(),
     };
 
-    // Trigger the workflow
-    const handle = await tasks.trigger("bookmark-enrichment", payload);
+    const workflowClient = await createWorkflowClient();
+    const handle = await workflowClient.triggerBookmarkEnrichment(payload);
 
     console.log(`[Enrichment] Workflow spawned for bookmark ${bookmarkId}`, {
       workflowId: handle.id,
@@ -161,13 +163,10 @@ export type GetBookmarkPost = PrismaType.Result<
 };
 
 export const bookmarksRouter = {
-  // Create a new bookmark
   create: protectedProcedure
     .input(createBookmarkSchema)
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
-
-      // Check for duplicate bookmark
       const existing = await prisma.bookmarkPost.findUnique({
         where: {
           userId_platform_postId: {
@@ -182,7 +181,6 @@ export const bookmarksRouter = {
         throw new Error("Bookmark already exists");
       }
 
-      // Create bookmark with media
       const bookmark = await prisma.bookmarkPost.create({
         data: {
           userId,
@@ -221,7 +219,6 @@ export const bookmarksRouter = {
         },
       });
 
-      // Spawn enrichment workflow asynchronously
       const workflowId = await spawnEnrichmentWorkflow(
         bookmark.id,
         userId,
@@ -230,12 +227,11 @@ export const bookmarksRouter = {
         input.content
       );
 
-      // Create enrichment record if workflow was spawned
       if (workflowId) {
         await prisma.bookmarkEnrichment.create({
           data: {
             bookmarkPostId: bookmark.id,
-            processingStatus: "PENDING",
+            processingStatus: DictProcessingStatus.PENDING,
             workflowId,
           },
         });
@@ -244,7 +240,6 @@ export const bookmarksRouter = {
       return bookmark;
     }),
 
-  // List bookmarks with pagination and filtering
   list: protectedProcedure
     .input(
       z.object({
@@ -257,34 +252,29 @@ export const bookmarksRouter = {
       const filters = input.filters || {};
       const pagination = input.pagination || {
         limit: 20,
-        sortBy: "savedAt" as const,
-        sortOrder: "desc" as const,
+        sortBy: "savedAt",
+        sortOrder: "desc",
       };
       const limit = pagination.limit;
 
-      // Build where clause
       const where: Prisma.BookmarkPostWhereInput = {
         userId,
       };
 
-      // Handle platform filter (single platform)
       if (filters.platform) {
         where.platform = filters.platform;
       }
 
-      // Handle platforms filter (multiple platforms using OR)
       if (filters.platforms && filters.platforms.length > 0) {
         where.platform = {
           in: filters.platforms,
         };
       }
 
-      // Handle exact author username match
       if (filters.authorUsername) {
         where.authorUsername = filters.authorUsername;
       }
 
-      // Handle author username contains (partial match)
       if (filters.authorUsernameContains) {
         where.authorUsername = {
           contains: filters.authorUsernameContains,
@@ -292,7 +282,6 @@ export const bookmarksRouter = {
         };
       }
 
-      // Handle savedAt date range filter
       if (filters.dateFrom || filters.dateTo) {
         where.savedAt = {};
         if (filters.dateFrom) {
@@ -303,7 +292,6 @@ export const bookmarksRouter = {
         }
       }
 
-      // Handle createdAt date range filter
       if (filters.createdAtFrom || filters.createdAtTo) {
         where.createdAt = {};
         if (filters.createdAtFrom) {
@@ -322,7 +310,6 @@ export const bookmarksRouter = {
         };
       }
 
-      // Handle category inclusion filter
       if (filters.categoryIds && filters.categoryIds.length > 0) {
         where.categories = {
           some: {
@@ -333,7 +320,6 @@ export const bookmarksRouter = {
         };
       }
 
-      // Handle category exclusion filter
       if (filters.excludeCategoryIds && filters.excludeCategoryIds.length > 0) {
         where.categories = {
           none: {
@@ -344,16 +330,13 @@ export const bookmarksRouter = {
         };
       }
 
-      // Handle content search using full-text search
       if (filters.contentSearch) {
-        // Prepare search terms for PostgreSQL full-text search
         const searchTerms = filters.contentSearch
           .trim()
           .split(/\s+/)
           .map((term) => `${term}:*`)
           .join(" & ");
 
-        // Use raw SQL for full-text search
         const searchResults = await prisma.$queryRawUnsafe<
           Array<{ id: string }>
         >(
@@ -367,14 +350,12 @@ export const bookmarksRouter = {
           searchTerms
         );
 
-        // Add the matching IDs to the where clause
         const matchingIds = searchResults.map((r) => r.id);
         if (matchingIds.length > 0) {
           where.id = {
             in: matchingIds,
           };
         } else {
-          // No matches found, return empty result
           return {
             bookmarks: [],
             nextCursor: undefined,
@@ -383,7 +364,6 @@ export const bookmarksRouter = {
         }
       }
 
-      // Add cursor pagination
       if (pagination.cursor) {
         where.id = {
           ...(where.id as any),
@@ -391,10 +371,9 @@ export const bookmarksRouter = {
         };
       }
 
-      // Fetch bookmarks
       const bookmarks = await prisma.bookmarkPost.findMany({
         where,
-        take: limit + 1, // Fetch one extra to determine if there's a next page
+        take: limit + 1,
         orderBy: {
           [pagination.sortBy]: pagination.sortOrder,
         },
@@ -413,10 +392,8 @@ export const bookmarksRouter = {
         },
       });
 
-      // Get total count
       const total = await prisma.bookmarkPost.count({ where });
 
-      // Determine if there's a next page
       const hasMore = bookmarks.length > limit;
       const items = hasMore ? bookmarks.slice(0, limit) : bookmarks;
       const nextCursor = hasMore ? items[items.length - 1]?.id : undefined;
@@ -430,7 +407,6 @@ export const bookmarksRouter = {
       return response;
     }),
 
-  // Get a single bookmark by ID
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .handler(async ({ input, context }) => {
@@ -439,7 +415,7 @@ export const bookmarksRouter = {
       const bookmark = await prisma.bookmarkPost.findFirst({
         where: {
           id: input.id,
-          userId, // Ensure user can only access their own bookmarks
+          userId,
         },
         include: {
           media: true,
@@ -461,7 +437,6 @@ export const bookmarksRouter = {
         throw new Error("Bookmark not found");
       }
 
-      // Increment view count
       await prisma.bookmarkPost.update({
         where: { id: input.id },
         data: {
@@ -477,7 +452,6 @@ export const bookmarksRouter = {
       };
     }),
 
-  // Update a bookmark
   update: protectedProcedure
     .input(
       z.object({
@@ -488,7 +462,6 @@ export const bookmarksRouter = {
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
 
-      // Verify ownership
       const existing = await prisma.bookmarkPost.findFirst({
         where: {
           id: input.id,
@@ -503,14 +476,12 @@ export const bookmarksRouter = {
         throw new Error("Bookmark not found");
       }
 
-      // Handle collection updates if provided
       if (input.data.collectionIds !== undefined) {
         const currentCollectionIds = existing.collections.map(
           (c) => c.collectionId
         );
         const newCollectionIds = input.data.collectionIds;
 
-        // Find collections to add and remove
         const collectionsToAdd = newCollectionIds.filter(
           (id) => !currentCollectionIds.includes(id)
         );
@@ -518,7 +489,6 @@ export const bookmarksRouter = {
           (id) => !newCollectionIds.includes(id)
         );
 
-        // Verify all new collections exist and belong to user
         if (collectionsToAdd.length > 0) {
           const collections = await prisma.collection.findMany({
             where: {
@@ -532,7 +502,6 @@ export const bookmarksRouter = {
           }
         }
 
-        // Remove old associations
         if (collectionsToRemove.length > 0) {
           await prisma.bookmarkPostCollection.deleteMany({
             where: {
@@ -542,7 +511,6 @@ export const bookmarksRouter = {
           });
         }
 
-        // Add new associations
         if (collectionsToAdd.length > 0) {
           await prisma.bookmarkPostCollection.createMany({
             data: collectionsToAdd.map((collectionId) => ({
@@ -554,7 +522,6 @@ export const bookmarksRouter = {
         }
       }
 
-      // Update bookmark content and metadata
       const bookmark = await prisma.bookmarkPost.update({
         where: { id: input.id },
         data: {
@@ -579,13 +546,10 @@ export const bookmarksRouter = {
       return bookmark;
     }),
 
-  // Delete a bookmark
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
-
-      // Verify ownership
       const existing = await prisma.bookmarkPost.findFirst({
         where: {
           id: input.id,
@@ -597,7 +561,6 @@ export const bookmarksRouter = {
         throw new Error("Bookmark not found");
       }
 
-      // Delete bookmark (cascade will handle media and associations)
       await prisma.bookmarkPost.delete({
         where: { id: input.id },
       });
@@ -605,7 +568,6 @@ export const bookmarksRouter = {
       return { success: true };
     }),
 
-  // Full-text search with PostgreSQL
   search: protectedProcedure
     .input(
       z.object({
@@ -624,38 +586,26 @@ export const bookmarksRouter = {
         sortOrder: "desc" as const,
       };
       const limit = pagination.limit;
-
-      // Build base where clause with filters
       const where: Prisma.BookmarkPostWhereInput = {
         userId,
       };
-
-      // Handle platform filter (single platform)
       if (filters.platform) {
         where.platform = filters.platform;
       }
-
-      // Handle platforms filter (multiple platforms using OR)
       if (filters.platforms && filters.platforms.length > 0) {
         where.platform = {
           in: filters.platforms,
         };
       }
-
-      // Handle exact author username match
       if (filters.authorUsername) {
         where.authorUsername = filters.authorUsername;
       }
-
-      // Handle author username contains (partial match)
       if (filters.authorUsernameContains) {
         where.authorUsername = {
           contains: filters.authorUsernameContains,
           mode: "insensitive",
         };
       }
-
-      // Handle savedAt date range filter
       if (filters.dateFrom || filters.dateTo) {
         where.savedAt = {};
         if (filters.dateFrom) {
@@ -665,8 +615,6 @@ export const bookmarksRouter = {
           where.savedAt.lte = filters.dateTo;
         }
       }
-
-      // Handle createdAt date range filter
       if (filters.createdAtFrom || filters.createdAtTo) {
         where.createdAt = {};
         if (filters.createdAtFrom) {
@@ -684,8 +632,6 @@ export const bookmarksRouter = {
           },
         };
       }
-
-      // Handle category inclusion filter
       if (filters.categoryIds && filters.categoryIds.length > 0) {
         where.categories = {
           some: {
@@ -695,8 +641,6 @@ export const bookmarksRouter = {
           },
         };
       }
-
-      // Handle category exclusion filter
       if (filters.excludeCategoryIds && filters.excludeCategoryIds.length > 0) {
         where.categories = {
           none: {
@@ -706,23 +650,17 @@ export const bookmarksRouter = {
           },
         };
       }
-
-      // Add cursor pagination
       if (pagination.cursor) {
         where.id = {
           lt: pagination.cursor,
         };
       }
-
-      // Prepare search terms for PostgreSQL full-text search
       const searchTerms = input.query
         .trim()
         .split(/\s+/)
         .map((term) => `${term}:*`)
         .join(" & ");
 
-      // Use raw SQL for full-text search with ranking
-      // This searches across content and authorName fields
       const searchQuery = `
         SELECT 
           bp.*,
@@ -814,8 +752,6 @@ export const bookmarksRouter = {
             : 3
         }
       `;
-
-      // Build parameters array
       const params: (string | Date | number)[] = [searchTerms, userId];
       if (filters.platform) params.push(filters.platform);
       if (filters.authorUsername) params.push(filters.authorUsername);
@@ -823,16 +759,11 @@ export const bookmarksRouter = {
       if (filters.dateTo) params.push(filters.dateTo);
       params.push(limit + 1);
 
-      // Execute raw query
       const rawResults = await prisma.$queryRawUnsafe<any[]>(
         searchQuery,
         ...params
       );
-
-      // Get IDs from raw results
       const bookmarkIds = rawResults.slice(0, limit).map((r) => r.id);
-
-      // Fetch full bookmark data with relations
       const bookmarks = await prisma.bookmarkPost.findMany({
         where: {
           id: {
@@ -853,14 +784,11 @@ export const bookmarksRouter = {
           },
         },
       });
-
-      // Sort bookmarks to match the order from search results
       const bookmarkMap = new Map(bookmarks.map((b) => [b.id, b]));
       const orderedBookmarks = bookmarkIds
         .map((id) => bookmarkMap.get(id))
         .filter((b): b is NonNullable<typeof b> => b !== undefined);
 
-      // Get total count for search
       const countQuery = `
         SELECT COUNT(*) as count
         FROM bookmark_post bp
@@ -914,8 +842,6 @@ export const bookmarksRouter = {
         ...countParams
       );
       const total = Number(countResult[0]?.count || 0);
-
-      // Determine if there's a next page
       const hasMore = rawResults.length > limit;
       const nextCursor = hasMore
         ? orderedBookmarks[orderedBookmarks.length - 1]?.id
@@ -928,11 +854,9 @@ export const bookmarksRouter = {
       };
     }),
 
-  // Bulk import bookmarks
   bulkImport: protectedProcedure
     .input(
       bulkImportSchema.superRefine((data, ctx) => {
-        // Validate each bookmark and provide detailed error paths
         data.bookmarks.forEach((bookmark, index) => {
           if (!bookmark.postId) {
             ctx.addIssue({
@@ -979,20 +903,17 @@ export const bookmarksRouter = {
       let successCount = 0;
       let failureCount = 0;
       const errors: Array<{ index: number; error: string }> = [];
-      // Use a Map to store created bookmarks with their original data
       const successfulBookmarks = new Map<
         string,
         { dbId: string; originalData: (typeof bookmarks)[number] }
       >();
 
-      // Process bookmarks in a transaction
       await prisma.$transaction(async (tx) => {
         for (let i = 0; i < bookmarks.length; i++) {
           const bookmark = bookmarks[i];
           if (!bookmark) continue;
 
           try {
-            // Check for duplicate
             const existing = await tx.bookmarkPost.findUnique({
               where: {
                 userId_platform_postId: {
@@ -1004,7 +925,6 @@ export const bookmarksRouter = {
             });
 
             if (existing) {
-              // Skip duplicate
               failureCount++;
               errors.push({
                 index: i,
@@ -1013,7 +933,6 @@ export const bookmarksRouter = {
               continue;
             }
 
-            // Parse timestamp
             const createdAt = new Date(bookmark.timestamp);
             if (isNaN(createdAt.getTime())) {
               failureCount++;
@@ -1024,7 +943,6 @@ export const bookmarksRouter = {
               continue;
             }
 
-            // Create bookmark
             const created = await tx.bookmarkPost.create({
               data: {
                 userId,
@@ -1049,8 +967,6 @@ export const bookmarksRouter = {
                   : undefined,
               },
             });
-
-            // Store the created bookmark ID with its original data
             successfulBookmarks.set(created.id, {
               dbId: created.id,
               originalData: bookmark,
@@ -1065,15 +981,10 @@ export const bookmarksRouter = {
           }
         }
       });
-
-      // Spawn enrichment workflows for all successfully created bookmarks
-      // Do this outside the transaction to avoid blocking
       if (successfulBookmarks.size > 0) {
         console.log(
           `[Bulk Import] Spawning enrichment workflows for ${successfulBookmarks.size} bookmarks`
         );
-
-        // Spawn workflows in parallel but don't wait for them
         Promise.all(
           Array.from(successfulBookmarks.entries()).map(
             async ([bookmarkId, { originalData }]) => {
@@ -1084,14 +995,12 @@ export const bookmarksRouter = {
                 originalData.postUrl,
                 originalData.content
               );
-
-              // Create enrichment record if workflow was spawned
               if (workflowId) {
                 await prisma.bookmarkEnrichment
                   .create({
                     data: {
                       bookmarkPostId: bookmarkId,
-                      processingStatus: "PENDING",
+                      processingStatus: ProcessingStatus.PENDING,
                       workflowId,
                     },
                   })
@@ -1116,12 +1025,10 @@ export const bookmarksRouter = {
       };
     }),
 
-  // Create URL bookmark with metadata extraction
-  // Requirements: 1.1, 1.3, 3.1, 3.2, 4.1, 4.4
   createUrlBookmark: protectedProcedure
     .input(
       z.object({
-        url: z.string().min(1, "URL is required"),
+        url: z.url(),
         title: z.string().optional(),
         description: z.string().optional(),
         collectionIds: z.array(z.string()).optional(),
@@ -1130,22 +1037,16 @@ export const bookmarksRouter = {
     )
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
-
-      // Validate and normalize URL (Requirement 2.1, 5.1)
-      // Requirements: 1.3, 1.5, 4.2
       let normalizedUrl: string;
       try {
         normalizedUrl = validateAndNormalizeUrl(input.url);
       } catch (error) {
-        // Return user-friendly error message (Requirement 1.3)
         const errorMessage =
           error instanceof Error ? error.message : "Invalid URL format";
         throw new Error(
           `Unable to save bookmark: ${errorMessage}. Please check the URL and try again.`
         );
       }
-
-      // Check for duplicate bookmarks using normalized URL (Requirement 1.3)
       const existingBookmark = await prisma.bookmarkPost.findFirst({
         where: {
           userId,
@@ -1189,7 +1090,6 @@ export const bookmarksRouter = {
         }
       }
 
-      // Extract metadata if title/description not provided (Requirement 4.1, 4.2, 4.3)
       let title = input.title;
       let description = input.description;
       let extractedMetadata = input.metadata || {};
@@ -1210,7 +1110,6 @@ export const bookmarksRouter = {
             extractedAt: new Date().toISOString(),
           };
         } catch (error) {
-          // Handle metadata extraction failures gracefully (Requirement 4.2, 4.5)
           metadataExtractionFailed = true;
           console.warn(
             `[Metadata Extraction] Failed for ${normalizedUrl}:`,
@@ -1227,21 +1126,18 @@ export const bookmarksRouter = {
         }
       }
 
-      // Generate a unique postId for the URL bookmark
       const postId = `url_${Date.now()}_${Math.random()
         .toString(36)
         .substring(2, 9)}`;
 
-      // Extract domain for author fields
       const urlObj = new URL(normalizedUrl);
       const domain = urlObj.hostname;
 
-      // Create bookmark with platform: GENERIC_URL (Requirement 1.1)
       try {
         const bookmark = await prisma.bookmarkPost.create({
           data: {
             userId,
-            platform: "GENERIC_URL",
+            platform: DictPlatform.GENERIC_URL,
             postId,
             postUrl: normalizedUrl,
             content: description || "",
@@ -1250,7 +1146,6 @@ export const bookmarksRouter = {
             authorProfileUrl: `${urlObj.protocol}//${domain}`,
             createdAt: new Date(),
             metadata: extractedMetadata as Prisma.InputJsonValue,
-            // Associate with collections if specified (Requirement 3.1, 3.2)
             collections: input.collectionIds
               ? {
                   create: input.collectionIds.map((collectionId) => ({
@@ -1274,17 +1169,14 @@ export const bookmarksRouter = {
           },
         });
 
-        // Spawn enrichment workflow asynchronously
-        // For URL bookmarks, pass the URL as content so the workflow can fetch the actual page content
         const workflowId = await spawnEnrichmentWorkflow(
           bookmark.id,
           userId,
-          "GENERIC_URL",
+          DictPlatform.GENERIC_URL,
           normalizedUrl,
-          description || normalizedUrl // Use URL as fallback if description is empty
+          description || normalizedUrl
         );
 
-        // Create enrichment record if workflow was spawned
         if (workflowId) {
           await prisma.bookmarkEnrichment.create({
             data: {
@@ -1296,8 +1188,6 @@ export const bookmarksRouter = {
         }
 
         const result = bookmark;
-
-        // Add warning flag if metadata extraction failed
         if (metadataExtractionFailed) {
           return {
             ...result,
@@ -1308,13 +1198,11 @@ export const bookmarksRouter = {
 
         return result;
       } catch (error) {
-        // Log error for debugging (Requirement 1.5)
         console.error(
           `[Bookmark Creation] Failed to create bookmark for ${normalizedUrl}:`,
           error
         );
 
-        // Return user-friendly error message
         if (
           error instanceof Error &&
           error.message.includes("Unique constraint")
@@ -1330,8 +1218,6 @@ export const bookmarksRouter = {
       }
     }),
 
-  // Check if URL is already bookmarked
-  // Requirements: 5.1, 5.2
   checkUrlBookmarked: protectedProcedure
     .input(
       z.object({
@@ -1340,17 +1226,13 @@ export const bookmarksRouter = {
     )
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
-
-      // Normalize URL for consistent comparison (Requirement 5.1)
       let normalizedUrl: string;
       try {
         normalizedUrl = validateAndNormalizeUrl(input.url);
       } catch (error) {
-        // If URL is invalid, return null
         return null;
       }
 
-      // Query database for matching URL (Requirement 5.2)
       const bookmark = await prisma.bookmarkPost.findFirst({
         where: {
           userId,
@@ -1371,12 +1253,9 @@ export const bookmarksRouter = {
           },
         },
       });
-
-      // Return bookmark if exists, null otherwise
       return bookmark ?? null;
     }),
 
-  // Bulk delete bookmarks
   bulkDelete: protectedProcedure
     .input(
       z.object({
@@ -1388,8 +1267,6 @@ export const bookmarksRouter = {
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
       const { bookmarkIds } = input;
-
-      // Verify all bookmarks belong to the user
       const bookmarks = await prisma.bookmarkPost.findMany({
         where: {
           id: { in: bookmarkIds },
@@ -1404,7 +1281,6 @@ export const bookmarksRouter = {
         );
       }
 
-      // Delete all bookmarks (cascade will handle media and associations)
       await prisma.bookmarkPost.deleteMany({
         where: {
           id: { in: bookmarkIds },
@@ -1418,7 +1294,6 @@ export const bookmarksRouter = {
       };
     }),
 
-  // Bulk add bookmarks to collections
   bulkAddToCollections: protectedProcedure
     .input(
       z.object({

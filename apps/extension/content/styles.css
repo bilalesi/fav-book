@@ -1,37 +1,40 @@
 /* Styles for save button overlay and UI elements */
 
 .sbm-save-button {
-  position: absolute;
-  z-index: 9999;
-  background: #3b82f6;
-  color: white;
+  /* Remove absolute positioning to flow inline */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: rgb(113, 118, 123);
   border: none;
-  border-radius: 6px;
-  padding: 6px 12px;
+  border-radius: 9999px;
+  padding: 8px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 400;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   transition: all 0.2s ease;
+  min-width: 34px;
+  min-height: 34px;
 }
 
 .sbm-save-button:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  background: rgba(29, 155, 240, 0.1);
+  color: rgb(29, 155, 240);
 }
 
 .sbm-save-button:active {
-  transform: translateY(0);
+  background: rgba(29, 155, 240, 0.2);
 }
 
 .sbm-save-button.saving {
-  background: #6b7280;
+  color: rgb(113, 118, 123);
   cursor: wait;
+  opacity: 0.6;
 }
 
 .sbm-save-button.saved {
-  background: #10b981;
+  color: rgb(0, 186, 124);
 }
 
 .sbm-notification {

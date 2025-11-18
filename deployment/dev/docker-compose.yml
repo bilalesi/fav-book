@@ -1,0 +1,80 @@
+# This Docker Compose file runs only infrastructure services (PostgreSQL, Restate)
+# Application services (web, server) run locally for fast iteration and debugging
+#
+# Usage:
+#   docker-compose up -d              # Start all services
+#   docker-compose down               # Stop all services
+#   docker-compose down -v            # Stop and remove volumes (clean slate)
+#   docker-compose logs -f <service>  # View logs
+#   docker-compose ps                 # Check service status
+
+services:
+  postgres:
+    image: postgres:18.1
+    container_name: bookmarks-dev-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: bookmarks_dev
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres-data:/var/lib/postgresql
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d bookmarks_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    networks:
+      - bookmarks-dev
+
+  restate:
+    image: restatedev/restate:latest
+    container_name: bookmarks-dev-restate
+    restart: unless-stopped
+
+    ports:
+      - "8080:8080"
+      - "9070:9070"
+
+    volumes:
+      - restate-data:/restate-data
+
+    environment:
+      RESTATE_OBSERVABILITY__LOG__FORMAT: pretty
+      RESTATE_OBSERVABILITY__LOG__LEVEL: info
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9070/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+    networks:
+      - bookmarks-dev
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
+    name: bookmarks-dev-postgres-data
+    driver: local
+
+  restate-data:
+    name: bookmarks-dev-restate-data
+    driver: local
+
+networks:
+  bookmarks-dev:
+    name: bookmarks-dev-network
+    driver: bridge

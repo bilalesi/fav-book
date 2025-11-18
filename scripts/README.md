@@ -1,4 +1,25 @@
-# Bookmark Crawler Scripts
+# Scripts
+
+This directory contains utility scripts for the Social Bookmarks Manager application.
+
+## Available Scripts
+
+### Restate Infrastructure Management (`manage-restate.sh`)
+
+Manages the Restate server lifecycle for workflow orchestration. See [RESTATE_INFRASTRUCTURE.md](./RESTATE_INFRASTRUCTURE.md) for detailed documentation.
+
+```bash
+# Start Restate server
+./scripts/manage-restate.sh start
+
+# Check status
+./scripts/manage-restate.sh status
+
+# Stop server
+./scripts/manage-restate.sh stop
+```
+
+### Bookmark Crawler Scripts
 
 These scripts allow you to extract your existing bookmarks from X (Twitter) and LinkedIn for bulk import into the Social Bookmarks Manager.
 

@@ -11,6 +11,8 @@ build
 # Environment variables
 .env
 .env*.local
+deployment/dev/.env.server
+deployment/dev/.env.web
 
 # IDEs and editors
 .vscode/*

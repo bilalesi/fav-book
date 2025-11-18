@@ -62,6 +62,12 @@ function MonitoringDashboard() {
     refetchInterval: 30000,
   });
 
+  const { data: restateStats } = useQuery({
+    queryKey: ["monitoring", "restate"],
+    queryFn: () => client.monitoring.restateStats({}),
+    refetchInterval: 30000,
+  });
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
@@ -90,8 +96,8 @@ function MonitoringDashboard() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <HealthIndicator
-                name="Trigger.dev"
-                healthy={health.services.triggerDev.healthy}
+                name="Restate"
+                healthy={health.services.restate.healthy}
               />
               <HealthIndicator
                 name="LM Studio"
@@ -309,6 +315,79 @@ function MonitoringDashboard() {
                   </div>
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Restate Services */}
+      {restateStats && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="w-5 h-5" />
+              Restate Services
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Deployments</span>
+                  <Badge variant="outline">
+                    {restateStats.deploymentsCount}
+                  </Badge>
+                </div>
+                {restateStats.deployments.length > 0 && (
+                  <div className="space-y-2 text-sm">
+                    {restateStats.deployments.map(
+                      (deployment: any, idx: number) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between text-muted-foreground"
+                        >
+                          <span>
+                            {deployment.deployment?.id ||
+                              `Deployment ${idx + 1}`}
+                          </span>
+                          <Badge variant="secondary" className="text-xs">
+                            {deployment.deployment?.protocol_type || "HTTP"}
+                          </Badge>
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-4 border-t">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">
+                    Registered Services
+                  </span>
+                  <Badge variant="outline">{restateStats.servicesCount}</Badge>
+                </div>
+                {restateStats.services.length > 0 && (
+                  <div className="space-y-2 text-sm">
+                    {restateStats.services.map((service: any) => (
+                      <div
+                        key={service.name}
+                        className="flex items-center justify-between"
+                      >
+                        <span className="font-medium">{service.name}</span>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-xs">
+                            {service.ty || service.service_type || "service"}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {service.handlers?.length || 0} handlers
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>

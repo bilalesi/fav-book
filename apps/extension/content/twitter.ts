@@ -70,20 +70,39 @@ function getTweetId(tweet: HTMLElement): string | null {
  * Inject save button into tweet element
  */
 function injectSaveButton(tweet: HTMLElement, tweetId: string) {
-  // Find the action bar (like, retweet, etc.)
+  // Find the bookmark button to place ours next to it
+  const bookmarkButton = tweet.querySelector('[data-testid="bookmark"]');
   const actionBar = tweet.querySelector('[role="group"]');
+  
   if (!actionBar) return;
 
-  const button = createSaveButton();
-  button.style.marginLeft = "12px";
-
+  const buttonWrapper = createSaveButton();
+  const button = buttonWrapper.querySelector("button");
+  if (!button) return;
+  
   button.addEventListener("click", async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    await handleSaveClick(tweet, tweetId, button);
+    await handleSaveClick(tweet, tweetId, buttonWrapper);
   });
 
-  actionBar.appendChild(button);
+  // Try to place it after the bookmark button
+  if (bookmarkButton) {
+    // Find the direct child of actionBar that contains the bookmark button
+    let targetElement: Element = bookmarkButton;
+    while (targetElement.parentElement && targetElement.parentElement !== actionBar) {
+      targetElement = targetElement.parentElement;
+    }
+    
+    if (targetElement.parentElement === actionBar) {
+      // Insert after the bookmark button container
+      actionBar.insertBefore(buttonWrapper, targetElement.nextSibling);
+      return;
+    }
+  }
+  
+  // Fallback: Insert as last element
+  actionBar.appendChild(buttonWrapper);
 }
 
 /**
@@ -92,9 +111,9 @@ function injectSaveButton(tweet: HTMLElement, tweetId: string) {
 async function handleSaveClick(
   tweet: HTMLElement,
   tweetId: string,
-  button: HTMLButtonElement
+  buttonWrapper: HTMLElement
 ) {
-  updateButtonState(button, "saving");
+  updateButtonState(buttonWrapper, "saving");
 
   try {
     const extractedPost = extractTweetData(tweet, tweetId);
@@ -110,14 +129,14 @@ async function handleSaveClick(
     });
 
     if (response.success) {
-      updateButtonState(button, "saved");
+      updateButtonState(buttonWrapper, "saved");
       showNotification("Tweet saved successfully!", "success");
     } else {
       throw new Error(response.error || "Failed to save tweet");
     }
   } catch (error: any) {
     console.error("Error saving tweet:", error);
-    updateButtonState(button, "default");
+    updateButtonState(buttonWrapper, "default");
     showNotification(error.message || "Failed to save tweet", "error");
   }
 }

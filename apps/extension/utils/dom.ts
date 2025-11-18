@@ -19,44 +19,62 @@ export function showNotification(
 }
 
 /**
- * Create a save button element
+ * Create a save button element matching Twitter's button style
  */
-export function createSaveButton(): HTMLButtonElement {
+export function createSaveButton(): HTMLElement {
+  // Create wrapper div to match Twitter's structure
+  const wrapper = document.createElement("div");
+  wrapper.style.cssText = "display: flex; align-items: center; margin: 0;";
+  
   const button = document.createElement("button");
   button.className = "sbm-save-button";
-  button.textContent = "Save";
   button.setAttribute("aria-label", "Save to Social Bookmarks Manager");
-
-  return button;
+  button.setAttribute("type", "button");
+  
+  // Create icon (bookmark icon)
+  const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  icon.setAttribute("viewBox", "0 0 24 24");
+  icon.setAttribute("width", "18");
+  icon.setAttribute("height", "18");
+  icon.setAttribute("fill", "currentColor");
+  icon.style.cssText = "display: inline-block; vertical-align: text-bottom;";
+  
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute("d", "M4 3h16a1 1 0 0 1 1 1v18l-9-6-9 6V4a1 1 0 0 1 1-1z");
+  icon.appendChild(path);
+  
+  button.appendChild(icon);
+  wrapper.appendChild(button);
+  
+  return wrapper;
 }
 
 /**
  * Update button state
  */
 export function updateButtonState(
-  button: HTMLButtonElement,
+  buttonWrapper: HTMLElement,
   state: "default" | "saving" | "saved"
 ) {
+  const button = buttonWrapper.querySelector("button");
+  if (!button) return;
+  
   button.classList.remove("saving", "saved");
 
   switch (state) {
     case "saving":
       button.classList.add("saving");
-      button.textContent = "Saving...";
       button.disabled = true;
       break;
     case "saved":
       button.classList.add("saved");
-      button.textContent = "Saved ✓";
       button.disabled = true;
       setTimeout(() => {
-        button.textContent = "Save";
-        button.disabled = false;
         button.classList.remove("saved");
+        button.disabled = false;
       }, 2000);
       break;
     default:
-      button.textContent = "Save";
       button.disabled = false;
   }
 }

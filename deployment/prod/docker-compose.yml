@@ -1,0 +1,358 @@
+version: "3.8"
+
+# This Docker Compose file orchestrates all services for production deployment:
+# - PostgreSQL database
+# - Restate server (workflow orchestration)
+# - Restate worker (workflow execution)
+# - API server (backend)
+# - Web application (frontend)
+#
+# Prerequisites:
+#   1. Build all Docker images: deployment/prod/build-all.sh
+#   2. Configure environment: .env.production
+#   3. Deploy: deployment/prod/deploy.sh
+#
+# Usage:
+#   docker-compose -f deployment/prod/docker-compose.yml up -d
+#   docker-compose -f deployment/prod/docker-compose.yml down
+#   docker-compose -f deployment/prod/docker-compose.yml logs -f <service>
+#   docker-compose -f deployment/prod/docker-compose.yml ps
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bookmarks-prod-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-bookmarks_prod}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      # Performance tuning
+      POSTGRES_MAX_CONNECTIONS: ${POSTGRES_MAX_CONNECTIONS:-100}
+
+    ports:
+      # Only expose if needed for external access (e.g., backups, monitoring)
+      # Comment out for maximum security
+      - "5432:5432"
+
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-bookmarks_prod}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    networks:
+      - bookmarks-prod
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  restate:
+    image: restatedev/restate:latest
+    container_name: bookmarks-prod-restate
+    restart: unless-stopped
+
+    ports:
+      # Ingress port - for workflow invocations from application
+      - "8080:8080"
+      # Admin port - for service registration and management
+      - "9070:9070"
+
+    volumes:
+      - restate-data:/restate-data
+
+    environment:
+      # Restate configuration
+      RESTATE_OBSERVABILITY__LOG__FORMAT: json
+      RESTATE_OBSERVABILITY__LOG__LEVEL: ${LOG_LEVEL:-info}
+      # Performance tuning
+      RESTATE_WORKER__NUM_TIMERS_IN_MEMORY_LIMIT: 1024
+      RESTATE_WORKER__STORAGE__ROCKSDB__WRITE_BUFFER_SIZE: 67108864
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9070/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+    networks:
+      - bookmarks-prod
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: ${RESTATE_MEMORY_LIMIT:-2g}
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  restate-worker:
+    image: bookmarks-restate-worker:latest
+    container_name: bookmarks-prod-restate-worker
+    restart: unless-stopped
+
+    environment:
+      # Node environment
+      NODE_ENV: production
+
+      # Database connection (internal Docker network)
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-bookmarks_prod}
+
+      # Restate configuration
+      RESTATE_INGRESS_URL: http://restate:8080
+      RESTATE_ADMIN_URL: http://restate:9070
+      RESTATE_SERVICE_PORT: ${RESTATE_SERVICE_PORT:-9080}
+      WORKER_HOST: restate-worker
+
+      # AI Services
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      OPENAI_MAX_TOKENS: ${OPENAI_MAX_TOKENS:-1000}
+
+      # Media Download
+      COBALT_API_URL: ${COBALT_API_URL}
+      COBALT_TIMEOUT: ${COBALT_TIMEOUT:-30000}
+
+      # Storage
+      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT}
+      STORAGE_REGION: ${STORAGE_REGION}
+      STORAGE_BUCKET: ${STORAGE_BUCKET}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY}
+
+      # Feature Flags
+      ENABLE_AI_SUMMARIZATION: ${ENABLE_AI_SUMMARIZATION:-true}
+      ENABLE_MEDIA_DOWNLOAD: ${ENABLE_MEDIA_DOWNLOAD:-true}
+      MAX_MEDIA_SIZE_MB: ${MAX_MEDIA_SIZE_MB:-500}
+      MAX_SUMMARY_LENGTH: ${MAX_SUMMARY_LENGTH:-500}
+      WORKFLOW_RETRY_ATTEMPTS: ${WORKFLOW_RETRY_ATTEMPTS:-3}
+      WORKFLOW_RETRY_DELAY_MS: ${WORKFLOW_RETRY_DELAY_MS:-5000}
+
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+
+    ports:
+      - "9080:9080"
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+
+    networks:
+      - bookmarks-prod
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      restate:
+        condition: service_healthy
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  server:
+    image: bookmarks-server:latest
+    container_name: bookmarks-prod-server
+    restart: unless-stopped
+
+    environment:
+      # Node environment
+      NODE_ENV: production
+      PORT: ${PORT:-3000}
+
+      # Database connection (internal Docker network)
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-bookmarks_prod}
+
+      # Authentication
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL}
+
+      # CORS
+      CORS_ORIGIN: ${CORS_ORIGIN}
+
+      # OAuth Providers
+      TWITTER_CLIENT_ID: ${TWITTER_CLIENT_ID}
+      TWITTER_CLIENT_SECRET: ${TWITTER_CLIENT_SECRET}
+      LINKEDIN_CLIENT_ID: ${LINKEDIN_CLIENT_ID}
+      LINKEDIN_CLIENT_SECRET: ${LINKEDIN_CLIENT_SECRET}
+
+      # Email Service
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      EMAIL_FROM: ${EMAIL_FROM}
+
+      # Restate configuration
+      RESTATE_INGRESS_URL: http://restate:8080
+      RESTATE_ADMIN_URL: http://restate:9070
+
+      # Feature Flags
+      ENABLE_AI_SUMMARIZATION: ${ENABLE_AI_SUMMARIZATION:-true}
+      ENABLE_MEDIA_DOWNLOAD: ${ENABLE_MEDIA_DOWNLOAD:-true}
+      MAX_STORAGE_GB: ${MAX_STORAGE_GB:-100}
+
+      # Rate Limiting
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+      RATE_LIMIT_WINDOW: ${RATE_LIMIT_WINDOW:-60000}
+
+      # Session
+      SESSION_MAX_AGE: ${SESSION_MAX_AGE:-604800000}
+      SESSION_UPDATE_AGE: ${SESSION_UPDATE_AGE:-86400000}
+
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+
+    ports:
+      - "3000:3000"
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+    networks:
+      - bookmarks-prod
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      restate:
+        condition: service_healthy
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: ${API_MEMORY_LIMIT:-1g}
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  web:
+    image: bookmarks-web:latest
+    container_name: bookmarks-prod-web
+    restart: unless-stopped
+
+    environment:
+      # Build-time variables (baked into the image)
+      # Runtime configuration via nginx
+      NGINX_PORT: 3001
+
+    ports:
+      - "3001:3001"
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3001/",
+        ]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+    networks:
+      - bookmarks-prod
+
+    depends_on:
+      server:
+        condition: service_healthy
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: ${WEB_MEMORY_LIMIT:-512m}
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres-data:
+    name: bookmarks-prod-postgres-data
+    driver: local
+
+  restate-data:
+    name: bookmarks-prod-restate-data
+    driver: local
+
+networks:
+  bookmarks-prod:
+    name: bookmarks-prod-network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

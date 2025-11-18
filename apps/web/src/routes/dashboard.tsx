@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { getUser } from "@/functions/get-user";
 import { useDashboardStats } from "@/hooks/use-dashboard";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,6 +24,25 @@ export const Route = createFileRoute("/dashboard")({
 
 function RouteComponent() {
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { session } = Route.useRouteContext();
+
+  // Send auth token to extension
+  useEffect(() => {
+    if (session?.session?.token && session?.user?.id) {
+      console.log("Sending auth token to extension");
+      window.postMessage(
+        {
+          type: "FAV_BOOK_LOGIN_SUCCESS",
+          data: {
+            token: session.session.token,
+            userId: session.user.id,
+          },
+        },
+        "*"
+      );
+    }
+  }, [session]);
+
 
   return (
     <div className="flex flex-col h-full">
