@@ -9,9 +9,6 @@ import type { SummaryResult } from "../types";
 import { throwAppropriateError } from "../lib/errors";
 import { createWorkflowLogger } from "../lib/logger";
 
-/**
- * Input for summarization service
- */
 export interface SummarizationInput {
   content: string;
   bookmarkId: string;
@@ -20,10 +17,6 @@ export interface SummarizationInput {
   maxLength?: number;
 }
 
-/**
- * Summarization service
- * Uses ctx.run() for AI service calls to ensure durability
- */
 export const summarizationService = restate.service({
   name: "SummarizationService",
   handlers: {

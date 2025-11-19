@@ -14,7 +14,28 @@ NC='\033[0m'
 
 # Configuration
 RESTATE_ADMIN_URL="${RESTATE_ADMIN_ENDPOINT:-http://localhost:9070}"
-WORKER_URL="${RESTATE_WORKER_URL:-http://host.docker.internal:9080}"
+
+# Determine the correct worker URL based on environment
+if [ -n "$RESTATE_WORKER_URL" ]; then
+    # Use explicitly set URL
+    WORKER_URL="$RESTATE_WORKER_URL"
+else
+    # On macOS, Docker containers must use host.docker.internal to reach the host
+    # On Linux, use the gateway IP from the Docker network
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        WORKER_URL="http://host.docker.internal:9080"
+    else
+        # Get the gateway IP from the Docker network (Linux)
+        GATEWAY_IP=$(docker network inspect bookmarks-dev-network 2>/dev/null | grep -o '"Gateway": "[^"]*"' | head -1 | cut -d'"' -f4)
+        
+        if [ -n "$GATEWAY_IP" ]; then
+            WORKER_URL="http://${GATEWAY_IP}:9080"
+        else
+            # Fallback to host.docker.internal
+            WORKER_URL="http://host.docker.internal:9080"
+        fi
+    fi
+fi
 
 echo -e "${BLUE}📝 Registering Restate worker...${NC}"
 echo -e "   Admin URL: $RESTATE_ADMIN_URL"
@@ -23,8 +44,16 @@ echo -e "   Worker URL: $WORKER_URL"
 # Check if Restate admin is reachable
 if ! curl -s -f "$RESTATE_ADMIN_URL/health" > /dev/null 2>&1; then
     echo -e "${RED}❌ Restate admin is not reachable at $RESTATE_ADMIN_URL${NC}"
-    echo -e "${YELLOW}Make sure Restate is running (docker-compose up -d)${NC}"
+    echo -e "${YELLOW}💡 Make sure Restate is running:${NC}"
+    echo -e "   cd deployment/dev && docker-compose up -d"
     exit 1
+fi
+
+# Check if worker is reachable (optional check, don't fail if not)
+if curl -s -f "http://localhost:9080" > /dev/null 2>&1; then
+    echo -e "${GREEN}✓ Worker is reachable${NC}"
+else
+    echo -e "${YELLOW}⚠ Worker may not be running yet at localhost:9080${NC}"
 fi
 
 # Register the worker

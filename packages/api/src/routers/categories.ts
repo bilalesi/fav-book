@@ -3,12 +3,10 @@ import { z } from "zod";
 import prisma from "@favy/db";
 import type { Category } from "@favy/shared";
 
-// Validation schemas
 const createCategorySchema = z.object({
   name: z.string().min(1).max(100),
 });
 
-// System categories to seed on first run
 const SYSTEM_CATEGORIES = [
   "Technology",
   "Business",
@@ -22,7 +20,6 @@ const SYSTEM_CATEGORIES = [
   "Education",
 ];
 
-// Helper function to transform Prisma result to Category
 function transformCategory(category: any): Category {
   return {
     id: category.id,
@@ -33,7 +30,6 @@ function transformCategory(category: any): Category {
   };
 }
 
-// Helper function to seed system categories
 async function seedSystemCategories() {
   const existingSystemCategories = await prisma.category.findMany({
     where: {
@@ -42,7 +38,6 @@ async function seedSystemCategories() {
     },
   });
 
-  // Only seed if no system categories exist
   if (existingSystemCategories.length === 0) {
     await prisma.category.createMany({
       data: SYSTEM_CATEGORIES.map((name) => ({
@@ -56,14 +51,10 @@ async function seedSystemCategories() {
 }
 
 export const categoriesRouter = {
-  // List all categories (system + user's custom categories) with bookmark counts
   list: protectedProcedure.handler(async ({ context }) => {
     const userId = context.session.user.id;
-
-    // Ensure system categories are seeded
     await seedSystemCategories();
 
-    // Fetch system categories and user's custom categories
     const categories = await prisma.category.findMany({
       where: {
         OR: [
@@ -81,7 +72,7 @@ export const categoriesRouter = {
             bookmarks: {
               where: {
                 bookmarkPost: {
-                  userId, // Only count bookmarks belonging to this user
+                  userId,
                 },
               },
             },
@@ -96,13 +87,10 @@ export const categoriesRouter = {
     }));
   }),
 
-  // Create a custom category
   create: protectedProcedure
     .input(createCategorySchema)
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
-
-      // Check if category with same name already exists for this user
       const existing = await prisma.category.findUnique({
         where: {
           name_userId: {
@@ -116,7 +104,6 @@ export const categoriesRouter = {
         throw new Error("Category with this name already exists");
       }
 
-      // Create custom category
       const category = await prisma.category.create({
         data: {
           name: input.name,
@@ -128,7 +115,6 @@ export const categoriesRouter = {
       return transformCategory(category);
     }),
 
-  // Assign a category to a bookmark
   assignToBookmark: protectedProcedure
     .input(
       z.object({
@@ -139,14 +125,10 @@ export const categoriesRouter = {
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
 
-      // Verify category exists and user has access to it
       const category = await prisma.category.findFirst({
         where: {
           id: input.categoryId,
-          OR: [
-            { isSystem: true, userId: null }, // System category
-            { userId }, // User's custom category
-          ],
+          OR: [{ isSystem: true, userId: null }, { userId }],
         },
       });
 
@@ -154,7 +136,6 @@ export const categoriesRouter = {
         throw new Error("Category not found");
       }
 
-      // Verify bookmark ownership
       const bookmark = await prisma.bookmarkPost.findFirst({
         where: {
           id: input.bookmarkId,
@@ -166,7 +147,6 @@ export const categoriesRouter = {
         throw new Error("Bookmark not found");
       }
 
-      // Check if association already exists
       const existingAssociation = await prisma.bookmarkPostCategory.findUnique({
         where: {
           bookmarkPostId_categoryId: {
@@ -180,7 +160,6 @@ export const categoriesRouter = {
         throw new Error("Bookmark is already assigned to this category");
       }
 
-      // Create association
       await prisma.bookmarkPostCategory.create({
         data: {
           bookmarkPostId: input.bookmarkId,
@@ -191,7 +170,6 @@ export const categoriesRouter = {
       return { success: true };
     }),
 
-  // Remove a category from a bookmark
   removeFromBookmark: protectedProcedure
     .input(
       z.object({
@@ -202,14 +180,10 @@ export const categoriesRouter = {
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
 
-      // Verify category exists and user has access to it
       const category = await prisma.category.findFirst({
         where: {
           id: input.categoryId,
-          OR: [
-            { isSystem: true, userId: null }, // System category
-            { userId }, // User's custom category
-          ],
+          OR: [{ isSystem: true, userId: null }, { userId }],
         },
       });
 
@@ -217,7 +191,6 @@ export const categoriesRouter = {
         throw new Error("Category not found");
       }
 
-      // Verify bookmark ownership
       const bookmark = await prisma.bookmarkPost.findFirst({
         where: {
           id: input.bookmarkId,
@@ -229,7 +202,6 @@ export const categoriesRouter = {
         throw new Error("Bookmark not found");
       }
 
-      // Check if association exists
       const existingAssociation = await prisma.bookmarkPostCategory.findUnique({
         where: {
           bookmarkPostId_categoryId: {
@@ -243,7 +215,6 @@ export const categoriesRouter = {
         throw new Error("Bookmark is not assigned to this category");
       }
 
-      // Delete association
       await prisma.bookmarkPostCategory.delete({
         where: {
           bookmarkPostId_categoryId: {

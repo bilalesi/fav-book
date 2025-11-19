@@ -31,7 +31,7 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   MAX_SUMMARY_LENGTH: 1000,
   WORKFLOW_RETRY_ATTEMPTS: 3,
   WORKFLOW_RETRY_DELAY_MS: 5000,
-};
+} as const;
 
 /**
  * Feature flag names for type-safe access

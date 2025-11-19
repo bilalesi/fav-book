@@ -22,7 +22,6 @@
  */
 
 import * as restate from "@restatedev/restate-sdk";
-import { RestatePromise } from "@restatedev/restate-sdk";
 import type {
   BookmarkEnrichmentInput,
   BookmarkEnrichmentOutput,
@@ -62,10 +61,8 @@ export const bookmarkEnrichmentWorkflow = restate.object({
         enableMediaDownload,
       } = payload;
 
-      // Create workflow ID from invocation ID
       const workflowId = await ctx.rand.uuidv4();
 
-      // Create structured logger with correlation IDs
       const logger = createWorkflowLogger({
         workflowId,
         bookmarkId,
@@ -88,7 +85,6 @@ export const bookmarkEnrichmentWorkflow = restate.object({
       };
 
       try {
-        // Step 1: Content Retrieval (optional, non-critical)
         let fullContent = content;
         const contentTimer = startTimer(WorkflowStep.CONTENT_RETRIEVAL, logger);
 
@@ -97,7 +93,6 @@ export const bookmarkEnrichmentWorkflow = restate.object({
             step: WorkflowStep.CONTENT_RETRIEVAL,
           });
 
-          // Call content retrieval service using ctx.serviceClient()
           const contentResult = await ctx
             .serviceClient(contentRetrievalService)
             .retrieve({
@@ -140,7 +135,6 @@ export const bookmarkEnrichmentWorkflow = restate.object({
           });
         }
 
-        // Step 2: AI Summarization
         const aiSummarizationEnabled =
           process.env.ENABLE_AI_SUMMARIZATION !== "false";
 
@@ -156,7 +150,6 @@ export const bookmarkEnrichmentWorkflow = restate.object({
               contentLength: fullContent.length,
             });
 
-            // Call summarization service using ctx.serviceClient()
             const summaryResult = await ctx
               .serviceClient(summarizationService)
               .summarize({
@@ -211,7 +204,6 @@ export const bookmarkEnrichmentWorkflow = restate.object({
           });
         }
 
-        // Step 3: Media Detection and Download (if enabled)
         const mediaDownloadEnabled =
           process.env.ENABLE_MEDIA_DOWNLOAD !== "false";
         const shouldProcessMedia = enableMediaDownload && mediaDownloadEnabled;
@@ -385,7 +377,6 @@ export const bookmarkEnrichmentWorkflow = restate.object({
           }
         }
 
-        // Step 6: Update database with final status
         const dbUpdateTimer = startTimer(WorkflowStep.DATABASE_UPDATE, logger);
 
         try {
@@ -393,7 +384,6 @@ export const bookmarkEnrichmentWorkflow = restate.object({
             step: WorkflowStep.DATABASE_UPDATE,
           });
 
-          // Determine final status
           const hasErrors = (result.errors?.length ?? 0) > 0;
           const hasSummary = !!result.summary;
           const hasMedia = !!(
@@ -463,7 +453,6 @@ export const bookmarkEnrichmentWorkflow = restate.object({
             stackTrace: err.stack,
           });
 
-          // Database update failure is critical, throw to trigger retry
           throw err;
         }
       } catch (error) {

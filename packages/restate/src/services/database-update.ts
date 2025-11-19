@@ -14,9 +14,6 @@ import type {
 import { throwAppropriateError } from "../lib/errors";
 import { createWorkflowLogger } from "../lib/logger";
 
-/**
- * Input for bookmark enrichment update
- */
 export interface BookmarkEnrichmentUpdateInput {
   bookmarkId: string;
   workflowId: string;
@@ -28,9 +25,6 @@ export interface BookmarkEnrichmentUpdateInput {
   errors?: WorkflowError[];
 }
 
-/**
- * Input for media record creation
- */
 export interface MediaRecordInput {
   bookmarkId: string;
   workflowId: string;
@@ -40,16 +34,9 @@ export interface MediaRecordInput {
   originalUrl: string;
 }
 
-/**
- * Database update service
- * Uses ctx.run() for idempotent database updates
- */
 export const databaseUpdateService = restate.service({
   name: "DatabaseUpdateService",
   handlers: {
-    /**
-     * Updates bookmark enrichment data
-     */
     updateEnrichment: async (
       ctx: restate.Context,
       input: BookmarkEnrichmentUpdateInput
@@ -112,9 +99,8 @@ export const databaseUpdateService = restate.service({
             }
           });
 
-          // Log workflow errors if any
           if (input.errors && input.errors.length > 0) {
-            await logWorkflowErrors(
+            await storeLogWorkflowErrors(
               input.bookmarkId,
               input.workflowId,
               input.errors
@@ -139,9 +125,6 @@ export const databaseUpdateService = restate.service({
       }
     },
 
-    /**
-     * Creates a downloaded media record
-     */
     createMediaRecord: async (
       ctx: restate.Context,
       input: MediaRecordInput
@@ -212,9 +195,6 @@ export const databaseUpdateService = restate.service({
       }
     },
 
-    /**
-     * Marks a media download as failed
-     */
     markMediaFailed: async (
       ctx: restate.Context,
       input: {
@@ -263,10 +243,7 @@ export const databaseUpdateService = restate.service({
   },
 });
 
-/**
- * Logs workflow errors to the database
- */
-async function logWorkflowErrors(
+async function storeLogWorkflowErrors(
   bookmarkId: string,
   workflowId: string,
   errors: WorkflowError[]

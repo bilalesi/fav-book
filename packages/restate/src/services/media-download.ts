@@ -9,9 +9,6 @@ import type { DownloadResult } from "../types";
 import { throwAppropriateError } from "../lib/errors";
 import { createWorkflowLogger } from "../lib/logger";
 
-/**
- * Input for media download service
- */
 export interface MediaDownloadInput {
   url: string;
   bookmarkId: string;
@@ -21,10 +18,6 @@ export interface MediaDownloadInput {
   quality?: string;
 }
 
-/**
- * Media download service
- * Uses ctx.run() for download operations to ensure durability
- */
 export const mediaDownloadService = restate.service({
   name: "MediaDownloadService",
   handlers: {

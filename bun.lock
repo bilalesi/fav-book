@@ -256,6 +256,9 @@
     },
     "packages/shared": {
       "name": "@favy/shared",
+      "dependencies": {
+        "@favy/db": "workspace:*",
+      },
       "devDependencies": {
         "tsdown": "catalog:",
       },

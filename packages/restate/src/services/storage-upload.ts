@@ -9,9 +9,6 @@ import type { UploadResult, MediaMetadata } from "../types";
 import { throwAppropriateError } from "../lib/errors";
 import { createWorkflowLogger } from "../lib/logger";
 
-/**
- * Input for storage upload service
- */
 export interface StorageUploadInput {
   filePath: string;
   bookmarkId: string;
@@ -20,10 +17,6 @@ export interface StorageUploadInput {
   metadata: MediaMetadata;
 }
 
-/**
- * Storage upload service
- * Wraps S3 operations in ctx.run() for durability
- */
 export const storageUploadService = restate.service({
   name: "StorageUploadService",
   handlers: {

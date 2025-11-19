@@ -117,7 +117,6 @@ export async function createWorkflowClient(): Promise<WorkflowClient> {
       adminUrl: process.env.RESTATE_ADMIN_ENDPOINT || "http://localhost:9070",
     });
   } else if (engine === "trigger") {
-    // Lazy load Trigger client wrapper
     const { TriggerWorkflowClient } = await import("./trigger-client-wrapper");
     baseClient = new TriggerWorkflowClient();
   } else {
@@ -126,6 +125,5 @@ export async function createWorkflowClient(): Promise<WorkflowClient> {
     );
   }
 
-  // Wrap the base client with logging
   return new LoggingWorkflowClient(baseClient);
 }

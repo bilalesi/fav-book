@@ -51,6 +51,10 @@ services:
       RESTATE_OBSERVABILITY__LOG__FORMAT: pretty
       RESTATE_OBSERVABILITY__LOG__LEVEL: info
 
+    # Allow container to reach host machine
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9070/health"]
       interval: 10s

@@ -1,9 +1,12 @@
 import { protectedProcedure } from "../index";
 import { z } from "zod";
 import prisma from "@favy/db";
-import type { DashboardStats, BookmarkPost } from "@favy/shared";
+import {
+  type DashboardStats,
+  type BookmarkPost,
+  DictPlatform,
+} from "@favy/shared";
 
-// Helper function to transform Prisma result to BookmarkPost
 function transformBookmarkPost(bookmark: any): BookmarkPost {
   return {
     id: bookmark.id,
@@ -52,38 +55,31 @@ const statsCache = new Map<
   string,
   { data: DashboardStats; timestamp: number }
 >();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 5 * 60 * 1000;
 
 export const dashboardRouter = {
-  // Get dashboard statistics
   getStats: protectedProcedure.handler(async ({ context }) => {
     const userId = context.session.user.id;
-
-    // Check cache
     const cached = statsCache.get(userId);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       return cached.data;
     }
-
-    // Get total bookmarks count
     const totalBookmarks = await prisma.bookmarkPost.count({
       where: { userId },
     });
 
-    // Get bookmarks by platform
     const twitterCount = await prisma.bookmarkPost.count({
-      where: { userId, platform: "TWITTER" },
+      where: { userId, platform: DictPlatform.TWITTER },
     });
 
     const linkedinCount = await prisma.bookmarkPost.count({
-      where: { userId, platform: "LINKEDIN" },
+      where: { userId, platform: DictPlatform.LINKEDIN },
     });
 
     const genericUrlCount = await prisma.bookmarkPost.count({
-      where: { userId, platform: "GENERIC_URL" },
+      where: { userId, platform: DictPlatform.GENERIC_URL },
     });
 
-    // Get recent bookmarks (5 most recent)
     const recentBookmarksData = await prisma.bookmarkPost.findMany({
       where: { userId },
       take: 5,
@@ -103,7 +99,6 @@ export const dashboardRouter = {
       },
     });
 
-    // Get most viewed bookmarks (5 most viewed)
     const mostViewedData = await prisma.bookmarkPost.findMany({
       where: { userId },
       take: 5,
@@ -123,7 +118,6 @@ export const dashboardRouter = {
       },
     });
 
-    // Get topic breakdown by categories
     const categoryBreakdown = await prisma.bookmarkPostCategory.groupBy({
       by: ["categoryId"],
       where: {
@@ -141,7 +135,6 @@ export const dashboardRouter = {
       },
     });
 
-    // Fetch category names
     const categoryIds = categoryBreakdown.map((cb) => cb.categoryId);
     const categories = await prisma.category.findMany({
       where: {
@@ -170,13 +163,11 @@ export const dashboardRouter = {
       topicBreakdown,
     };
 
-    // Cache the result
     statsCache.set(userId, { data: stats, timestamp: Date.now() });
 
     return stats;
   }),
 
-  // Get recent bookmarks with custom limit
   getRecentBookmarks: protectedProcedure
     .input(
       z.object({
@@ -208,7 +199,6 @@ export const dashboardRouter = {
       return bookmarks.map(transformBookmarkPost);
     }),
 
-  // Get most viewed bookmarks
   getMostViewed: protectedProcedure
     .input(
       z.object({
@@ -240,11 +230,8 @@ export const dashboardRouter = {
       return bookmarks.map(transformBookmarkPost);
     }),
 
-  // Get topic breakdown by categories
   getTopicBreakdown: protectedProcedure.handler(async ({ context }) => {
     const userId = context.session.user.id;
-
-    // Get category breakdown
     const categoryBreakdown = await prisma.bookmarkPostCategory.groupBy({
       by: ["categoryId"],
       where: {
@@ -262,7 +249,6 @@ export const dashboardRouter = {
       },
     });
 
-    // Fetch category names
     const categoryIds = categoryBreakdown.map((cb) => cb.categoryId);
     const categories = await prisma.category.findMany({
       where: {

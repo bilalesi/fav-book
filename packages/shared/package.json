@@ -19,5 +19,8 @@
     },
     "peerDependencies": {
         "typescript": "^5"
+    },
+    "dependencies": {
+        "@favy/db": "workspace:*"
     }
 }

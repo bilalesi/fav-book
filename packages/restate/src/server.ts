@@ -4,7 +4,7 @@
  * Registers all workflows and services with Restate
  * Starts the HTTP server to accept workflow invocations
  */
-
+import http2 from "node:http2";
 import * as restate from "@restatedev/restate-sdk";
 import { bookmarkEnrichmentWorkflow } from "./workflows/bookmark-enrichment";
 import { contentRetrievalService } from "./services/content-retrieval";
@@ -57,17 +57,21 @@ async function main() {
   console.log(`Restate admin URL: ${config.adminUrl}`);
 
   // Create Restate endpoint and register all services
-  restate
-    .endpoint()
-    .bind(bookmarkEnrichmentWorkflow)
-    .bind(contentRetrievalService)
-    .bind(summarizationService)
-    .bind(mediaDetectionService)
-    .bind(mediaDownloadService)
-    .bind(storageUploadService)
-    .bind(databaseUpdateService)
-    .bind(healthCheckService)
-    .listen(config.servicePort);
+  const http2Handler = restate.createEndpointHandler({
+    services: [
+      bookmarkEnrichmentWorkflow,
+      contentRetrievalService,
+      summarizationService,
+      mediaDetectionService,
+      mediaDownloadService,
+      storageUploadService,
+      databaseUpdateService,
+      healthCheckService,
+    ],
+  });
+
+  const httpServer = http2.createServer(http2Handler);
+  httpServer.listen(config.servicePort);
 
   console.log(
     `Restate service endpoint listening on port ${config.servicePort}`

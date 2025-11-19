@@ -3,7 +3,6 @@ import { z } from "zod";
 import prisma, { Prisma } from "@favy/db";
 import type { Collection } from "@favy/shared";
 
-// Validation schemas
 const createCollectionSchema = z.object({
   name: z.string().min(1).max(255),
   description: z.string().max(1000).optional(),
@@ -14,7 +13,6 @@ const updateCollectionSchema = z.object({
   description: z.string().max(1000).optional(),
 });
 
-// Type for collection with includes
 type CollectionWithBookmarks = Prisma.CollectionGetPayload<{
   include: {
     bookmarks: {
@@ -39,7 +37,6 @@ type CollectionWithBookmarks = Prisma.CollectionGetPayload<{
   };
 }>;
 
-// Helper function to transform Prisma result to Collection
 function transformCollection(
   collection: CollectionWithBookmarks | Prisma.CollectionGetPayload<object>
 ): Collection {
@@ -110,7 +107,6 @@ function transformCollection(
 }
 
 export const collectionsRouter = {
-  // Create a new collection
   create: protectedProcedure
     .input(createCollectionSchema)
     .handler(async ({ input, context }) => {
@@ -127,7 +123,6 @@ export const collectionsRouter = {
       return transformCollection(collection);
     }),
 
-  // List all collections for the user
   list: protectedProcedure.handler(async ({ context }) => {
     const userId = context.session.user.id;
 
@@ -153,7 +148,6 @@ export const collectionsRouter = {
     }));
   }),
 
-  // Get a single collection by ID with bookmarks
   get: protectedProcedure
     .input(z.object({ id: z.string() }))
     .handler(async ({ input, context }) => {
@@ -197,7 +191,6 @@ export const collectionsRouter = {
       return transformCollection(collection);
     }),
 
-  // Update a collection
   update: protectedProcedure
     .input(
       z.object({
@@ -208,7 +201,6 @@ export const collectionsRouter = {
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
 
-      // Verify ownership
       const existing = await prisma.collection.findFirst({
         where: {
           id: input.id,
@@ -232,13 +224,11 @@ export const collectionsRouter = {
       return transformCollection(collection);
     }),
 
-  // Delete a collection
   delete: protectedProcedure
     .input(z.object({ id: z.string() }))
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
 
-      // Verify ownership
       const existing = await prisma.collection.findFirst({
         where: {
           id: input.id,
@@ -250,7 +240,6 @@ export const collectionsRouter = {
         throw new Error("Collection not found");
       }
 
-      // Delete collection (cascade will handle bookmark associations)
       await prisma.collection.delete({
         where: { id: input.id },
       });
@@ -258,7 +247,6 @@ export const collectionsRouter = {
       return { success: true };
     }),
 
-  // Add a bookmark to a collection
   addBookmark: protectedProcedure
     .input(
       z.object({

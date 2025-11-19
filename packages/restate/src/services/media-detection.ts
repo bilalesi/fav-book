@@ -8,9 +8,6 @@ import * as restate from "@restatedev/restate-sdk";
 import type { MediaDetectionResult } from "../types";
 import { createWorkflowLogger } from "../lib/logger";
 
-/**
- * Input for media detection service
- */
 export interface MediaDetectionInput {
   url: string;
   bookmarkId: string;
@@ -20,10 +17,6 @@ export interface MediaDetectionInput {
   maxSizeMB?: number;
 }
 
-/**
- * Media detection service
- * Uses ctx.run() for non-deterministic operations
- */
 export const mediaDetectionService = restate.service({
   name: "MediaDetectionService",
   handlers: {

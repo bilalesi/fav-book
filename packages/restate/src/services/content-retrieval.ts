@@ -6,9 +6,8 @@
  */
 
 import * as restate from "@restatedev/restate-sdk";
-import type { Platform } from "@favy/shared";
-import { throwAppropriateError } from "../lib/errors";
-import { createWorkflowLogger } from "../lib/logger";
+import { DictPlatform, type Platform } from "@favy/shared";
+import { createWorkflowLogger, Logger } from "../lib/logger";
 
 /**
  * Input for content retrieval service
@@ -53,7 +52,6 @@ export const contentRetrievalService = restate.service({
       });
 
       try {
-        // Validate URL using ctx.run() for durability
         const isValid = await ctx.run("validate-url", async () => {
           return isValidUrl(input.url);
         });
@@ -62,10 +60,9 @@ export const contentRetrievalService = restate.service({
           throw new Error(`Invalid URL: ${input.url}`);
         }
 
-        // Route to appropriate handler based on platform
         let content: string;
         switch (input.platform) {
-          case "TWITTER":
+          case DictPlatform.TWITTER:
             content = await retrieveTwitterContent(
               ctx,
               input.url,
@@ -73,7 +70,7 @@ export const contentRetrievalService = restate.service({
               logger
             );
             break;
-          case "LINKEDIN":
+          case DictPlatform.LINKEDIN:
             content = await retrieveLinkedInContent(
               ctx,
               input.url,
@@ -81,7 +78,7 @@ export const contentRetrievalService = restate.service({
               logger
             );
             break;
-          case "GENERIC_URL":
+          case DictPlatform.GENERIC_URL:
             content = await retrieveGenericContent(
               ctx,
               input.url,
@@ -124,7 +121,7 @@ async function retrieveTwitterContent(
   ctx: restate.Context,
   url: string,
   fallbackContent: string,
-  logger: any
+  logger: Logger
 ): Promise<string> {
   return await ctx.run("retrieve-twitter-content", async () => {
     // Twitter content retrieval would require:
@@ -146,7 +143,7 @@ async function retrieveLinkedInContent(
   ctx: restate.Context,
   url: string,
   fallbackContent: string,
-  logger: any
+  logger: Logger
 ): Promise<string> {
   return await ctx.run("retrieve-linkedin-content", async () => {
     // LinkedIn content retrieval would require:
@@ -168,7 +165,7 @@ async function retrieveGenericContent(
   ctx: restate.Context,
   url: string,
   fallbackContent: string,
-  logger: any
+  logger: Logger
 ): Promise<string> {
   return await ctx.run("retrieve-generic-content", async () => {
     try {

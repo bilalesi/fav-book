@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { publicProcedure } from "../index";
+import { protectedProcedure } from "../index";
 import prisma from "@favy/db";
+import { DictProcessingStatus } from "@favy/shared";
 
 /**
  * Monitoring API router
@@ -8,7 +9,7 @@ import prisma from "@favy/db";
  */
 export const monitoringRouter = {
   // Get dashboard statistics
-  dashboard: publicProcedure.handler(async () => {
+  dashboard: protectedProcedure.handler(async () => {
     const now = new Date();
     const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -33,8 +34,7 @@ export const monitoringRouter = {
     };
   }),
 
-  // Get performance metrics
-  performance: publicProcedure
+  performance: protectedProcedure
     .input(z.object({ hours: z.number().optional().default(24) }))
     .handler(async ({ input }) => {
       const hours = input.hours;
@@ -72,8 +72,7 @@ export const monitoringRouter = {
       };
     }),
 
-  // Get error list
-  errors: publicProcedure
+  errors: protectedProcedure
     .input(
       z.object({
         limit: z.number().optional().default(50),
@@ -134,8 +133,7 @@ export const monitoringRouter = {
       };
     }),
 
-  // Get queue depth and backlog
-  queue: publicProcedure.handler(async () => {
+  queue: protectedProcedure.handler(async () => {
     const [pending, processing, backlog] = await Promise.all([
       prisma.bookmarkEnrichment.count({
         where: {
@@ -158,39 +156,47 @@ export const monitoringRouter = {
     };
   }),
 
-  // Get storage usage
-  storage: publicProcedure.handler(async () => {
-    const result = await prisma.downloadedMedia.aggregate({
-      _sum: {
-        fileSize: true,
-      },
-      _count: true,
-    });
+  storage: protectedProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+      })
+    )
+    .handler(async ({ input: { userId } }) => {
+      const result = await prisma.downloadedMedia.aggregate({
+        where: { bookmarkPost: { userId } },
+        _sum: {
+          fileSize: true,
+        },
+        _count: true,
+      });
 
-    const totalBytes = Number(result._sum.fileSize || 0);
-    const maxBytes = getMaxStorageBytes();
-    const usagePercent = (totalBytes / maxBytes) * 100;
+      const totalBytes = Number(result._sum.fileSize || 0);
+      const maxBytes = getMaxStorageBytes();
+      const usagePercent = (totalBytes / maxBytes) * 100;
 
-    // Get breakdown by media type
-    const byType = await prisma.downloadedMedia.groupBy({
-      by: ["type"],
-      _sum: {
-        fileSize: true,
-      },
-      _count: true,
-    });
+      const byType = await prisma.downloadedMedia.groupBy({
+        by: ["type"],
+        _sum: {
+          fileSize: true,
+        },
+        _count: true,
+      });
 
-    return {
-      totalBytes,
-      maxBytes,
-      usagePercent,
-      fileCount: result._count,
-      byType,
-    };
-  }),
+      return {
+        totalBytes,
+        maxBytes,
+        usagePercent,
+        fileCount: result._count,
+        byType: byType.map((t) => ({
+          type: t.type,
+          _count: t._count,
+          _sum: { fileSize: t._sum.fileSize },
+        })),
+      };
+    }),
 
-  // Get workflow timeline (for charts)
-  timeline: publicProcedure
+  timeline: protectedProcedure
     .input(
       z.object({
         hours: z.number().optional().default(24),
@@ -215,8 +221,7 @@ export const monitoringRouter = {
       };
     }),
 
-  // Get system health
-  health: publicProcedure.handler(async () => {
+  health: protectedProcedure.handler(async () => {
     const checks = await Promise.allSettled([
       checkRestateHealth(),
       checkLMStudioHealth(),
@@ -242,8 +247,7 @@ export const monitoringRouter = {
     };
   }),
 
-  // Get Restate workflow statistics
-  restateStats: publicProcedure.handler(async () => {
+  restateStats: protectedProcedure.handler(async () => {
     try {
       const restateAdminUrl =
         process.env.RESTATE_ADMIN_ENDPOINT || "http://localhost:9070";
@@ -342,7 +346,7 @@ async function getWorkflowStats(from: Date, to: Date) {
 async function getActiveWorkflowCount() {
   return await prisma.bookmarkEnrichment.count({
     where: {
-      processingStatus: "PROCESSING",
+      processingStatus: DictProcessingStatus.PROCESSING,
     },
   });
 }
@@ -351,7 +355,7 @@ async function getQueueDepth() {
   return await prisma.bookmarkEnrichment.count({
     where: {
       processingStatus: {
-        in: ["PENDING", "PROCESSING"],
+        in: [DictProcessingStatus.PENDING, DictProcessingStatus.PROCESSING],
       },
     },
   });
@@ -361,7 +365,7 @@ async function getBacklogStats() {
   // Get oldest pending enrichment
   const oldest = await prisma.bookmarkEnrichment.findFirst({
     where: {
-      processingStatus: "PENDING",
+      processingStatus: DictProcessingStatus.PENDING,
     },
     orderBy: {
       createdAt: "asc",
@@ -427,17 +431,17 @@ async function getWorkflowTimeline(since: Date, intervalMinutes: number) {
     interval.total++;
 
     switch (enrichment.processingStatus) {
-      case "COMPLETED":
-      case "PARTIAL_SUCCESS":
+      case DictProcessingStatus.COMPLETED:
+      case DictProcessingStatus.PARTIAL_SUCCESS:
         interval.completed++;
         break;
-      case "FAILED":
+      case DictProcessingStatus.FAILED:
         interval.failed++;
         break;
-      case "PROCESSING":
+      case DictProcessingStatus.PROCESSING:
         interval.processing++;
         break;
-      case "PENDING":
+      case DictProcessingStatus.PENDING:
         interval.pending++;
         break;
     }

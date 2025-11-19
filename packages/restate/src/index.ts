@@ -6,7 +6,7 @@
  */
 
 // Export types
-export * from "./types.js";
+export * from "./types";
 
 // Export client for workflow invocation
 export { RestateWorkflowClient } from "./client";
@@ -27,7 +27,7 @@ export {
   createTerminalError,
   preserveErrorContext,
   getErrorContext,
-} from "./lib/errors.js";
+} from "./lib/errors";
 
 // Export logging utilities
 export {
@@ -43,29 +43,28 @@ export {
   type LogLevel,
   type LogEntry,
   type WorkflowContext,
-} from "./lib/logger.js";
+} from "./lib/logger";
 
 // Export services
-export { contentRetrievalService } from "./services/content-retrieval.js";
-export { summarizationService } from "./services/summarization.js";
-export { mediaDetectionService } from "./services/media-detection.js";
-export { mediaDownloadService } from "./services/media-download.js";
-export { storageUploadService } from "./services/storage-upload.js";
-export { databaseUpdateService } from "./services/database-update.js";
+export { contentRetrievalService } from "./services/content-retrieval";
+export { summarizationService } from "./services/summarization";
+export { mediaDetectionService } from "./services/media-detection";
+export { mediaDownloadService } from "./services/media-download";
+export { storageUploadService } from "./services/storage-upload";
+export { databaseUpdateService } from "./services/database-update";
 
 // Export service input/output types
 export type {
   ContentRetrievalInput,
   ContentRetrievalOutput,
-} from "./services/content-retrieval.js";
-export type { SummarizationInput } from "./services/summarization.js";
-export type { MediaDetectionInput } from "./services/media-detection.js";
-export type { MediaDownloadInput } from "./services/media-download.js";
-export type { StorageUploadInput } from "./services/storage-upload.js";
+} from "./services/content-retrieval";
+export type { SummarizationInput } from "./services/summarization";
+export type { MediaDetectionInput } from "./services/media-detection";
+export type { MediaDownloadInput } from "./services/media-download";
+export type { StorageUploadInput } from "./services/storage-upload";
 export type {
   BookmarkEnrichmentUpdateInput,
   MediaRecordInput,
-} from "./services/database-update.js";
+} from "./services/database-update";
 
-// Export workflows
-export { bookmarkEnrichmentWorkflow } from "./workflows/bookmark-enrichment.js";
+export { bookmarkEnrichmentWorkflow } from "./workflows/bookmark-enrichment";
