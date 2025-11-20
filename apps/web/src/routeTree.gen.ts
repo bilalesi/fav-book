@@ -22,6 +22,7 @@ import { Route as ImportIndexRouteImport } from './routes/import.index'
 import { Route as CollectionsIndexRouteImport } from './routes/collections.index'
 import { Route as BookmarksIndexRouteImport } from './routes/bookmarks.index'
 import { Route as ImportUrlsRouteImport } from './routes/import.urls'
+import { Route as ImportTwitterRouteImport } from './routes/import.twitter'
 import { Route as CollectionsIdRouteImport } from './routes/collections.$id'
 import { Route as BookmarksIdRouteImport } from './routes/bookmarks.$id'
 
@@ -90,6 +91,11 @@ const ImportUrlsRoute = ImportUrlsRouteImport.update({
   path: '/urls',
   getParentRoute: () => ImportRoute,
 } as any)
+const ImportTwitterRoute = ImportTwitterRouteImport.update({
+  id: '/twitter',
+  path: '/twitter',
+  getParentRoute: () => ImportRoute,
+} as any)
 const CollectionsIdRoute = CollectionsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -113,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/bookmarks/$id': typeof BookmarksIdRoute
   '/collections/$id': typeof CollectionsIdRoute
+  '/import/twitter': typeof ImportTwitterRoute
   '/import/urls': typeof ImportUrlsRoute
   '/bookmarks/': typeof BookmarksIndexRoute
   '/collections/': typeof CollectionsIndexRoute
@@ -127,6 +134,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/bookmarks/$id': typeof BookmarksIdRoute
   '/collections/$id': typeof CollectionsIdRoute
+  '/import/twitter': typeof ImportTwitterRoute
   '/import/urls': typeof ImportUrlsRoute
   '/bookmarks': typeof BookmarksIndexRoute
   '/collections': typeof CollectionsIndexRoute
@@ -145,6 +153,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/bookmarks/$id': typeof BookmarksIdRoute
   '/collections/$id': typeof CollectionsIdRoute
+  '/import/twitter': typeof ImportTwitterRoute
   '/import/urls': typeof ImportUrlsRoute
   '/bookmarks/': typeof BookmarksIndexRoute
   '/collections/': typeof CollectionsIndexRoute
@@ -164,6 +173,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/bookmarks/$id'
     | '/collections/$id'
+    | '/import/twitter'
     | '/import/urls'
     | '/bookmarks/'
     | '/collections/'
@@ -178,6 +188,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/bookmarks/$id'
     | '/collections/$id'
+    | '/import/twitter'
     | '/import/urls'
     | '/bookmarks'
     | '/collections'
@@ -195,6 +206,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/bookmarks/$id'
     | '/collections/$id'
+    | '/import/twitter'
     | '/import/urls'
     | '/bookmarks/'
     | '/collections/'
@@ -306,6 +318,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ImportUrlsRouteImport
       parentRoute: typeof ImportRoute
     }
+    '/import/twitter': {
+      id: '/import/twitter'
+      path: '/twitter'
+      fullPath: '/import/twitter'
+      preLoaderRoute: typeof ImportTwitterRouteImport
+      parentRoute: typeof ImportRoute
+    }
     '/collections/$id': {
       id: '/collections/$id'
       path: '/$id'
@@ -352,11 +371,13 @@ const CollectionsRouteWithChildren = CollectionsRoute._addFileChildren(
 )
 
 interface ImportRouteChildren {
+  ImportTwitterRoute: typeof ImportTwitterRoute
   ImportUrlsRoute: typeof ImportUrlsRoute
   ImportIndexRoute: typeof ImportIndexRoute
 }
 
 const ImportRouteChildren: ImportRouteChildren = {
+  ImportTwitterRoute: ImportTwitterRoute,
   ImportUrlsRoute: ImportUrlsRoute,
   ImportIndexRoute: ImportIndexRoute,
 }

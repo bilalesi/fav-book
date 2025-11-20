@@ -50,6 +50,7 @@
     "deploy:health": "./scripts/deployment/health-check.sh"
   },
   "dependencies": {
+    "@prisma/client": "7",
     "@trigger.dev/sdk": "4.1.0",
     "better-auth": "^1.3.34",
     "dotenv": "^17.2.2",

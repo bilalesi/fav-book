@@ -4,8 +4,10 @@
     "private": true,
     "description": "Twitter bookmark crawler service",
     "scripts": {
-        "dev": "uv run uvicorn src.main:app --reload --port 8001 --host 0.0.0.0",
+        "dev": "./scripts/dev.sh",
         "build": "uv sync",
+        "migrate": "./scripts/migrate.sh",
+        "migrate:create": "./scripts/create-migration.sh",
         "test": "uv run pytest",
         "test:watch": "uv run pytest-watch",
         "check-types": "uv run mypy src/",

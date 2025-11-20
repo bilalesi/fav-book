@@ -32,7 +32,6 @@
     "@orpc/zod": "catalog:",
     "@prisma/client": "^6.19.0",
     "@trigger.dev/sdk": "4.1.0",
-    "dotenv": "catalog:",
     "elysia": "catalog:",
     "zod": "catalog:"
   }

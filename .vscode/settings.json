@@ -1,0 +1,5 @@
+{
+  "python.defaultInterpreterPath": "apps/twitor/.venv/bin/python",
+  "python.analysis.extraPaths": ["apps/twitor/src"],
+  "python.analysis.autoImportCompletions": true
+}

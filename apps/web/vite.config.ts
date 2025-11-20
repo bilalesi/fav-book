@@ -7,7 +7,7 @@ import tsconfigPaths from "vite-tsconfig-paths";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import tailwindcss from "@tailwindcss/vite";
 import viteReact from "@vitejs/plugin-react";
-import alchemy from "alchemy/cloudflare/tanstack-start";
+
 
 export default defineConfig((props: UserConfig) => {
   const isTest = props.mode === "test" || process.env.VITEST === "true";
@@ -20,6 +20,25 @@ export default defineConfig((props: UserConfig) => {
       viteReact(),
       // !isTest && alchemy(),
     ].filter(Boolean),
+    ssr: {
+      // Externalize all dependencies that should not be bundled for SSR
+      external: [
+        "@prisma/client",
+        "@prisma/adapter-pg",
+        "pg",
+        // Externalize workspace packages to use their built dist files
+        "@favy/db",
+        "@favy/api",
+      ],
+    },
+    optimizeDeps: {
+      // Exclude server-only packages from client-side dependency optimization
+      exclude: [
+        "@prisma/client",
+        "@favy/db",
+        "@favy/api",
+      ],
+    },
     build: {
       // Optimize bundle size with code splitting
       rollupOptions: {

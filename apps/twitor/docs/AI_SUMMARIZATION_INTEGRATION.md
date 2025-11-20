@@ -4,7 +4,7 @@ This document describes the AI summarization integration in the Twitor service.
 
 ## Overview
 
-The Twitor service now supports optional AI summarization of bookmarks during the crawling process. When enabled, the service triggers the existing Restate bookmark enrichment workflow for each imported bookmark.
+The Twitor service supports optional AI summarization of bookmarks during the crawling process. When enabled, the service triggers the bookmark enrichment workflow via the main API for each imported bookmark.
 
 ## Configuration
 
@@ -16,9 +16,9 @@ Add the following to your `.env` file:
 # Enable/disable AI summarization
 ENABLE_AI_SUMMARIZATION=true
 
-# Restate endpoints
-RESTATE_INGRESS_URL=http://localhost:8080
-RESTATE_ADMIN_URL=http://localhost:9070
+# API endpoints
+API_BASE_URL=http://localhost:3000
+API_AUTH_TOKEN=your_auth_token_here
 ```
 
 ### Request Parameters
@@ -40,9 +40,9 @@ When starting a crawl, include the `enableSummarization` parameter:
 When `enableSummarization` is `true` and `directImport` is `true`, the bookmark processor:
 
 1. Imports the bookmark to the database
-2. Triggers the Restate enrichment workflow via HTTP POST to:
+2. Triggers the enrichment workflow via HTTP POST to the main API:
    ```
-   {RESTATE_INGRESS_URL}/BookmarkEnrichment/{bookmarkId}/enrich
+   {API_BASE_URL}/api/bookmarks/{bookmarkId}/enrich
    ```
 3. Sends the following payload:
    ```json
@@ -87,8 +87,8 @@ Progress updates now include a `summarizationStatus` field:
 
 The implementation follows the requirement that **crawling continues even when summarization fails**:
 
-1. **Network Errors**: If the HTTP request to Restate fails, the error is logged and the status is set to `failed`, but processing continues
-2. **API Errors**: If Restate returns an error response, it's logged and processing continues
+1. **Network Errors**: If the HTTP request to the API fails, the error is logged and the status is set to `failed`, but processing continues
+2. **API Errors**: If the API returns an error response, it's logged and processing continues
 3. **Unexpected Errors**: Any unexpected errors are caught, logged, and processing continues
 
 The crawl will never fail due to summarization errors.
@@ -108,11 +108,10 @@ Note: Summarization is only triggered when `directImport` is `true`, as it requi
 
 The implementation can be tested by:
 
-1. Starting a Restate server
-2. Deploying the bookmark enrichment workflow
-3. Starting a crawl with `enableSummarization: true`
-4. Monitoring the progress updates for summarization status
-5. Checking the Restate logs for workflow invocations
+1. Starting the main API server
+2. Starting a crawl with `enableSummarization: true`
+3. Monitoring the progress updates for summarization status
+4. Checking the API logs for enrichment requests
 
 ## Future Enhancements
 

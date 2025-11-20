@@ -62,8 +62,13 @@ export class OllamaClient implements AIProviderClient {
       validateContent(params.prompt, "ollama");
 
       // Create Ollama provider with custom base URL (supports both local and cloud)
+      // Use OpenAI-compatible endpoint for structured outputs
+      const baseURL = this.config.apiUrl.endsWith("/v1")
+        ? this.config.apiUrl
+        : `${this.config.apiUrl}/v1`;
+
       const ollama = createOllama({
-        baseURL: this.config.apiUrl,
+        baseURL,
       });
 
       // Create model instance

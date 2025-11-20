@@ -145,11 +145,13 @@ if [ "$RUN_DB_MIGRATIONS" = true ]; then
     # Generate Prisma client
     echo -e "${BLUE}  → Generating Prisma client...${NC}"
     cd packages/db
-    bun run prisma generate
+    bun run db:generate
     
     # Run migrations
     echo -e "${BLUE}  → Running migrations...${NC}"
-    bun run prisma migrate dev
+    bun run db:migrate
+    bun run db:seed
+
     
     echo -e "${GREEN}✓ Database migrations completed${NC}\n"
     cd "$PROJECT_ROOT"
@@ -184,7 +186,7 @@ if [ "$START_SERVICES" = true ]; then
     cd "$PROJECT_ROOT"
     
     # Start Restate worker
-    echo -e "${BLUE}  → Starting Restate worker (port 9070)...${NC}"
+    echo -e "${BLUE}  → Starting Restate worker (port 9080)...${NC}"
     dotenvx run --env-file=deployment/dev/.env.server -- bun run --cwd packages/restate dev &
     RESTATE_PID=$!
     
@@ -193,7 +195,7 @@ if [ "$START_SERVICES" = true ]; then
     MAX_WAIT=30
     WAITED=0
     while [ $WAITED -lt $MAX_WAIT ]; do
-        if curl -s -f http://localhost:9070 > /dev/null 2>&1; then
+        if curl -s -f http://localhost:9080 > /dev/null 2>&1; then
             echo -e "${GREEN}✓ Worker is ready${NC}"
             break
         fi
@@ -204,6 +206,9 @@ if [ "$START_SERVICES" = true ]; then
     if [ $WAITED -ge $MAX_WAIT ]; then
         echo -e "${YELLOW}⚠ Worker took too long to start, continuing anyway${NC}"
     fi
+    
+    # Give it an extra moment to fully initialize
+    sleep 2
     
     # Register Restate worker with Restate server
     if [ "$START_INFRA" = true ] || [ "$RUN_DB_MIGRATIONS" = true ]; then

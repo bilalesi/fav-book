@@ -100,7 +100,6 @@ This service is part of the fav-book monorepo and integrates with:
 - **Turbo**: Build orchestration via `package.json` scripts
 - **PostgreSQL**: Shared database with `crawler` schema
 - **Main API**: Bookmark creation and enrichment workflows
-- **Restate**: Optional AI summarization workflows
 
 ## Architecture
 

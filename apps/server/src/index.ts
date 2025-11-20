@@ -27,7 +27,6 @@ import {
 const rpcHandler = new RPCHandler(appRouter, {
   interceptors: [
     onError((error, context) => {
-      console.log("–– – error––", error);
 
       // Check if this is an ORPC validation error
       if (
@@ -88,7 +87,6 @@ const apiHandler = new OpenAPIHandler(appRouter, {
     onError((error, context) => {
       // Map error to AppError
       const appError = mapErrorToAppError(error);
-      console.log("–– – appError––", appError);
 
       // Log error with context
       logError(error instanceof Error ? error : new Error(String(error)), {
@@ -201,7 +199,6 @@ const app = new Elysia()
 
   // Global error handling middleware
   .onError(({ code, error, set, request }) => {
-    console.log("–– – error–– 2elysia", error);
     const isProduction = process.env.NODE_ENV === "production";
 
     // Handle ValidationError specially to preserve structured validation errors

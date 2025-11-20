@@ -3,22 +3,39 @@
  */
 
 import type { Platform } from "../types";
-import {
-  WorkflowStep as PrismaWorkflowStep,
-  ErrorType as PrismaErrorType,
-} from "@favy/db";
 
 /**
  * Workflow step enumeration
  */
-export const WorkflowStep = PrismaWorkflowStep;
-export type WorkflowStep = PrismaWorkflowStep;
+export const WorkflowStep = {
+  CONTENT_RETRIEVAL: 'CONTENT_RETRIEVAL',
+  SUMMARIZATION: 'SUMMARIZATION',
+  MEDIA_DETECTION: 'MEDIA_DETECTION',
+  MEDIA_DOWNLOAD: 'MEDIA_DOWNLOAD',
+  STORAGE_UPLOAD: 'STORAGE_UPLOAD',
+  DATABASE_UPDATE: 'DATABASE_UPDATE'
+} as const
+
+export type WorkflowStep = (typeof WorkflowStep)[keyof typeof WorkflowStep]
 
 /**
  * Error types for classification
  */
-export const ErrorType = PrismaErrorType;
-export type ErrorType = PrismaErrorType;
+export const ErrorType = {
+  NETWORK_ERROR: 'NETWORK_ERROR',
+  TIMEOUT: 'TIMEOUT',
+  SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
+  RATE_LIMIT: 'RATE_LIMIT',
+  INVALID_CONTENT: 'INVALID_CONTENT',
+  AUTHENTICATION_FAILED: 'AUTHENTICATION_FAILED',
+  NOT_FOUND: 'NOT_FOUND',
+  MALFORMED_URL: 'MALFORMED_URL',
+  QUOTA_EXCEEDED: 'QUOTA_EXCEEDED',
+  UNKNOWN: 'UNKNOWN'
+} as const
+
+export type ErrorType = (typeof ErrorType)[keyof typeof ErrorType]
+
 
 /**
  * Input payload for bookmark enrichment workflow

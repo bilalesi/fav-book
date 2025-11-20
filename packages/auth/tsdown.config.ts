@@ -7,4 +7,13 @@ export default defineConfig({
   minify: true,
   logLevel: "info",
   treeshake: false,
+  external: [
+    "@favy/db",
+    "@prisma/client",
+    "@favy/trigger",
+    "@favy/shared",
+    "@favy/auth",
+    "@orpc/server",
+    "zod",
+  ]
 });
