@@ -1,4 +1,4 @@
-# This Docker Compose file runs only infrastructure services (PostgreSQL, Restate)
+# This Docker Compose file runs infrastructure services (PostgreSQL, Restate, Valkey, Twitor)
 # Application services (web, server) run locally for fast iteration and debugging
 #
 # Usage:
@@ -69,6 +69,98 @@ services:
       postgres:
         condition: service_healthy
 
+  valkey:
+    image: valkey/valkey:7-alpine
+    container_name: bookmarks-dev-valkey
+    restart: unless-stopped
+
+    ports:
+      - "6379:6379"
+
+    volumes:
+      - valkey-data:/data
+
+    command: >
+      valkey-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+    networks:
+      - bookmarks-dev
+
+  twitor:
+    image: bookmarks-twitor:latest
+    container_name: bookmarks-dev-twitor
+    restart: unless-stopped
+
+    environment:
+      # Twitter API Credentials
+      TWITTER_USERNAME: ${TWITTER_USERNAME}
+      TWITTER_PASSWORD: ${TWITTER_PASSWORD}
+      TWITTER_EMAIL: ${TWITTER_EMAIL}
+
+      # Database connection
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/bookmarks_dev
+
+      # API Configuration (host.docker.internal allows container to reach host)
+      API_BASE_URL: http://host.docker.internal:3000
+      API_AUTH_TOKEN: ${API_AUTH_TOKEN}
+
+      # Service Configuration
+      TWITOR_PORT: 8001
+      TWITOR_HOST: 0.0.0.0
+      MAX_CONCURRENT_CRAWLS: 5
+      BATCH_SIZE: 100
+
+      # Feature Flags
+      ENABLE_AI_SUMMARIZATION: true
+      ENABLE_MEDIA_DOWNLOAD: true
+
+      # Restate Configuration
+      RESTATE_INGRESS_URL: http://restate:8080
+      RESTATE_ADMIN_URL: http://restate:9070
+
+      # Valkey/Redis Configuration
+      VALKEY_URL: redis://valkey:6379/0
+      VALKEY_MAX_CONNECTIONS: 10
+
+      # Logging
+      LOG_LEVEL: INFO
+      DEBUG: false
+
+    ports:
+      - "8001:8001"
+
+    # Allow container to reach host machine
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+
+    networks:
+      - bookmarks-dev
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      restate:
+        condition: service_healthy
+
 volumes:
   postgres-data:
     name: bookmarks-dev-postgres-data
@@ -76,6 +168,10 @@ volumes:
 
   restate-data:
     name: bookmarks-dev-restate-data
+    driver: local
+
+  valkey-data:
+    name: bookmarks-dev-valkey-data
     driver: local
 
 networks:

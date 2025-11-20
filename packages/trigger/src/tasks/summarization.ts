@@ -23,7 +23,7 @@ export async function summarizeContent(
       throw new Error("Content cannot be empty");
     }
     const { createSummarizationService } = await import("@favy/ai");
-    const summarizationService = createSummarizationService();
+    const summarizationService = await createSummarizationService();
 
     logger.info("Calling AI service for summarization", {
       bookmarkId,

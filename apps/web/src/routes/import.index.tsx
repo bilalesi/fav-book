@@ -209,7 +209,19 @@ function RouteComponent() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
+              <Link to="/import/twitter" className="block">
+                <div className="border rounded-lg p-4 hover:bg-accent transition-colors h-full">
+                  <h3 className="font-semibold mb-2">Twitter Bookmarks</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Import bookmarks directly from Twitter with real-time
+                    progress tracking
+                  </p>
+                  <Button variant="outline" size="sm">
+                    Go to Twitter Import →
+                  </Button>
+                </div>
+              </Link>
               <div className="border rounded-lg p-4 hover:bg-accent transition-colors">
                 <h3 className="font-semibold mb-2">Social Media Bookmarks</h3>
                 <p className="text-sm text-muted-foreground mb-4">

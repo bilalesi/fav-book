@@ -308,12 +308,24 @@ EMAIL_FROM=onboarding@resend.dev
 **AI Services:**
 
 ```bash
-# LM Studio (local AI)
-LM_STUDIO_API_URL=http://localhost:1234/v1
-LM_STUDIO_MODEL=qwen_qwen3-4b-instruct-2507
+# AI Provider Selection (default: ollama)
+AI_PROVIDER=ollama  # or "lmstudio"
 
-# Or OpenAI
-OPENAI_API_KEY=sk-your-openai-api-key
+# LM Studio Configuration (if using lmstudio)
+LM_STUDIO_API_URL=http://localhost:1234/v1
+LM_STUDIO_MODEL=llama-3.2-3b-instruct
+LM_STUDIO_MAX_TOKENS=1000
+LM_STUDIO_TEMPERATURE=0.7
+
+# Ollama Configuration (if using ollama)
+OLLAMA_API_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.2:3b
+OLLAMA_MAX_TOKENS=1000
+OLLAMA_TEMPERATURE=0.7
+
+# AI Provider Validation
+AI_PROVIDER_VALIDATE_ON_STARTUP=true
+AI_PROVIDER_STRICT_MODE=false
 ```
 
 ## Troubleshooting

@@ -7,6 +7,7 @@ import { dashboardRouter } from "./dashboard";
 import { userRouter } from "./user";
 import { featureFlagsRouter } from "./feature-flags";
 import { monitoringRouter } from "./monitoring";
+import { twitterImportRouter } from "./twitter-import";
 
 export const appRouter = {
   healthCheck: publicProcedure.handler(() => {
@@ -25,6 +26,7 @@ export const appRouter = {
   user: userRouter,
   featureFlags: featureFlagsRouter,
   monitoring: monitoringRouter,
+  twitterImport: twitterImportRouter,
 };
 export type AppRouter = typeof appRouter;
 export type AppRouterClient = RouterClient<typeof appRouter>;

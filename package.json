@@ -39,6 +39,7 @@
     "dev:native": "turbo -F native dev",
     "dev:web": "turbo -F web dev",
     "dev:server": "turbo -F server dev",
+    "dev:twitor": "turbo -F twitor dev",
     "db:push": "turbo -F @favy/db db:push",
     "db:studio": "turbo -F @favy/db db:studio",
     "db:generate": "turbo -F @favy/db db:generate",

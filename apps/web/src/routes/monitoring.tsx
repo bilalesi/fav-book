@@ -68,6 +68,12 @@ function MonitoringDashboard() {
     refetchInterval: 30000,
   });
 
+  const { data: serviceConfig } = useQuery({
+    queryKey: ["monitoring", "serviceConfig"],
+    queryFn: () => client.monitoring.serviceConfig({}),
+    refetchInterval: 30000,
+  });
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
@@ -84,8 +90,109 @@ function MonitoringDashboard() {
         </Button>
       </div>
 
+      {/* Service Configuration */}
+      {serviceConfig && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Activity className="w-4 h-4" />
+                AI Provider
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Provider
+                  </span>
+                  <Badge variant="secondary" className="font-mono">
+                    {serviceConfig.ai.provider}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Model</span>
+                  <span className="text-sm font-medium">
+                    {serviceConfig.ai.model}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Status</span>
+                  <div className="flex items-center gap-2">
+                    {serviceConfig.ai.healthy ? (
+                      <>
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span className="text-sm text-green-600">Healthy</span>
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="w-4 h-4 text-red-500" />
+                        <span className="text-sm text-red-600">Unhealthy</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="pt-2 border-t">
+                  <span className="text-xs text-muted-foreground">
+                    Endpoint
+                  </span>
+                  <p className="text-xs font-mono mt-1 break-all">
+                    {serviceConfig.ai.url}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Activity className="w-4 h-4" />
+                Workflow Orchestrator
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Orchestrator
+                  </span>
+                  <Badge variant="secondary" className="font-mono">
+                    {serviceConfig.workflow.orchestrator}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Status</span>
+                  <div className="flex items-center gap-2">
+                    {serviceConfig.workflow.healthy ? (
+                      <>
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span className="text-sm text-green-600">Healthy</span>
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="w-4 h-4 text-red-500" />
+                        <span className="text-sm text-red-600">Unhealthy</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="pt-2 border-t">
+                  <span className="text-xs text-muted-foreground">
+                    Endpoint
+                  </span>
+                  <p className="text-xs font-mono mt-1 break-all">
+                    {serviceConfig.workflow.url}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* System Health */}
-      {health && (
+      {health && serviceConfig && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -96,24 +203,37 @@ function MonitoringDashboard() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <HealthIndicator
-                name="Restate"
-                healthy={health.services.restate.healthy}
+                name={
+                  serviceConfig.workflow.orchestrator === "restate"
+                    ? "Restate"
+                    : "Trigger.dev"
+                }
+                healthy={
+                  health.services[serviceConfig.workflow.orchestrator]
+                    ?.healthy ?? false
+                }
               />
               <HealthIndicator
-                name="LM Studio"
-                healthy={health.services.lmStudio.healthy}
+                name={
+                  serviceConfig.ai.provider === "ollama"
+                    ? "Ollama"
+                    : "LM Studio"
+                }
+                healthy={
+                  health.services[serviceConfig.ai.provider]?.healthy ?? false
+                }
               />
               <HealthIndicator
                 name="Cobalt API"
-                healthy={health.services.cobalt.healthy}
+                healthy={health.services.cobalt?.healthy ?? false}
               />
               <HealthIndicator
                 name="Storage"
-                healthy={health.services.storage.healthy}
+                healthy={health.services.storage?.healthy ?? false}
               />
               <HealthIndicator
                 name="Database"
-                healthy={health.services.database.healthy}
+                healthy={health.services.database?.healthy ?? false}
               />
             </div>
           </CardContent>

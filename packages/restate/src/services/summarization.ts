@@ -44,7 +44,7 @@ export const summarizationService = restate.service({
         // Call AI service within ctx.run() for durability
         const result = await ctx.run("call-ai-service", async () => {
           const { createSummarizationService } = await import("@favy/ai");
-          const summarizationService = createSummarizationService();
+          const summarizationService = await createSummarizationService();
 
           logger.info("Calling AI service for summarization", {
             contentLength: input.content.length,

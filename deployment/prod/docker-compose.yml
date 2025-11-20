@@ -2,10 +2,12 @@ version: "3.8"
 
 # This Docker Compose file orchestrates all services for production deployment:
 # - PostgreSQL database
+# - Valkey (Redis-compatible queue for Twitor)
 # - Restate server (workflow orchestration)
 # - Restate worker (workflow execution)
 # - API server (backend)
 # - Web application (frontend)
+# - Twitor (Twitter bookmark crawler service)
 #
 # Prerequisites:
 #   1. Build all Docker images: deployment/prod/build-all.sh
@@ -63,6 +65,49 @@ services:
         reservations:
           cpus: "0.5"
           memory: 512M
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  valkey:
+    image: valkey/valkey:7-alpine
+    container_name: bookmarks-prod-valkey
+    restart: unless-stopped
+
+    ports:
+      - "6379:6379"
+
+    volumes:
+      - valkey-data:/data
+
+    command: >
+      valkey-server
+      --appendonly yes
+      --maxmemory ${VALKEY_MAX_MEMORY:-256mb}
+      --maxmemory-policy allkeys-lru
+
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+    networks:
+      - bookmarks-prod
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: ${VALKEY_MEMORY_LIMIT:-512m}
+        reservations:
+          cpus: "0.1"
+          memory: 128M
 
     logging:
       driver: "json-file"
@@ -340,6 +385,85 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  twitor:
+    image: bookmarks-twitor:latest
+    container_name: bookmarks-prod-twitor
+    restart: unless-stopped
+
+    environment:
+      # Twitter API Credentials
+      TWITTER_USERNAME: ${TWITTER_USERNAME}
+      TWITTER_PASSWORD: ${TWITTER_PASSWORD}
+      TWITTER_EMAIL: ${TWITTER_EMAIL}
+
+      # Database connection (internal Docker network)
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-postgres}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-bookmarks_prod}
+
+      # API Configuration
+      API_BASE_URL: http://server:3000
+      API_AUTH_TOKEN: ${API_AUTH_TOKEN}
+
+      # Service Configuration
+      TWITOR_PORT: 8001
+      TWITOR_HOST: 0.0.0.0
+      MAX_CONCURRENT_CRAWLS: ${MAX_CONCURRENT_CRAWLS:-5}
+      BATCH_SIZE: ${BATCH_SIZE:-100}
+
+      # Feature Flags
+      ENABLE_AI_SUMMARIZATION: ${ENABLE_AI_SUMMARIZATION:-true}
+      ENABLE_MEDIA_DOWNLOAD: ${ENABLE_MEDIA_DOWNLOAD:-true}
+
+      # Restate Configuration
+      RESTATE_INGRESS_URL: http://restate:8080
+      RESTATE_ADMIN_URL: http://restate:9070
+
+      # Valkey/Redis Configuration
+      VALKEY_URL: redis://valkey:6379/0
+      VALKEY_MAX_CONNECTIONS: ${VALKEY_MAX_CONNECTIONS:-10}
+
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DEBUG: ${DEBUG:-false}
+
+    ports:
+      - "8001:8001"
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 15s
+
+    networks:
+      - bookmarks-prod
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      server:
+        condition: service_healthy
+      restate:
+        condition: service_healthy
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: ${TWITOR_MEMORY_LIMIT:-1g}
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   postgres-data:
     name: bookmarks-prod-postgres-data
@@ -347,6 +471,10 @@ volumes:
 
   restate-data:
     name: bookmarks-prod-restate-data
+    driver: local
+
+  valkey-data:
+    name: bookmarks-prod-valkey-data
     driver: local
 
 networks:

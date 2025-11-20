@@ -1,17 +1,7 @@
 import { OpenAICompatibleChatLanguageModel } from "@ai-sdk/openai-compatible";
-import type { LMStudioConfig, AIServiceError } from "./types";
-
-/**
- * Get LM Studio configuration from environment variables
- */
-export function getLMStudioConfig(): LMStudioConfig {
-  return {
-    apiUrl: process.env.LM_STUDIO_API_URL || "http://localhost:1234/v1",
-    model: process.env.LM_STUDIO_MODEL || "llama-3.2-3b-instruct",
-    maxTokens: parseInt(process.env.LM_STUDIO_MAX_TOKENS || "1000", 10),
-    temperature: parseFloat(process.env.LM_STUDIO_TEMPERATURE || "0.7"),
-  };
-}
+import type { LMStudioConfig } from "./types";
+import { AIServiceError, AIErrorCode } from "./types";
+import { getLMStudioConfig } from "./config";
 
 export function createLMStudioClient(config?: Partial<LMStudioConfig>) {
   const fullConfig = {
@@ -117,21 +107,75 @@ export function isRetryableError(error: unknown): boolean {
   return false;
 }
 
+/**
+ * Map error to appropriate AIErrorCode
+ */
+export function mapErrorToCode(error: unknown): AIErrorCode {
+  if (error instanceof Error) {
+    const message = error.message.toLowerCase();
+
+    // Network errors
+    if (message.includes("econnrefused")) {
+      return AIErrorCode.CONNECTION_REFUSED;
+    }
+    if (message.includes("timeout")) {
+      return AIErrorCode.TIMEOUT_ERROR;
+    }
+    if (message.includes("network") || message.includes("enotfound")) {
+      return AIErrorCode.NETWORK_ERROR;
+    }
+
+    // Service errors
+    if (message.includes("503") || message.includes("unavailable")) {
+      return AIErrorCode.SERVICE_UNAVAILABLE;
+    }
+    if (message.includes("429") || message.includes("rate limit")) {
+      return AIErrorCode.RATE_LIMIT_EXCEEDED;
+    }
+
+    // Configuration errors
+    if (message.includes("model") && message.includes("not found")) {
+      return AIErrorCode.MODEL_NOT_FOUND;
+    }
+    if (message.includes("invalid") && message.includes("configuration")) {
+      return AIErrorCode.INVALID_CONFIGURATION;
+    }
+
+    // Input errors
+    if (message.includes("empty") || message.includes("invalid input")) {
+      return AIErrorCode.INVALID_INPUT;
+    }
+    if (message.includes("too long") || message.includes("content length")) {
+      return AIErrorCode.CONTENT_TOO_LONG;
+    }
+
+    // Response errors
+    if (message.includes("schema") || message.includes("validation")) {
+      return AIErrorCode.SCHEMA_VALIDATION_FAILED;
+    }
+    if (message.includes("invalid response") || message.includes("parse")) {
+      return AIErrorCode.INVALID_RESPONSE;
+    }
+  }
+
+  // Default to network error for unknown errors
+  return AIErrorCode.NETWORK_ERROR;
+}
+
 export function createAIServiceError(
   error: unknown,
-  context: string
+  context: string,
+  provider?: "lmstudio" | "ollama"
 ): AIServiceError {
   const message =
     error instanceof Error ? error.message : "Unknown error occurred";
   const retryable = isRetryableError(error);
+  const code = mapErrorToCode(error);
 
-  const aiError = new Error(`${context}: ${message}`) as AIServiceError & {
-    code: string;
-    retryable: boolean;
-  };
-  aiError.name = "AIServiceError";
-  aiError.code = retryable ? "RETRYABLE_ERROR" : "NON_RETRYABLE_ERROR";
-  aiError.retryable = retryable;
-
-  return aiError;
+  return new AIServiceError(
+    `${context}: ${message}`,
+    code,
+    retryable,
+    provider
+  );
 }

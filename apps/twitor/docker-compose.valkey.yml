@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  valkey:
+    image: valkey/valkey:7.2-alpine
+    container_name: twitor-valkey
+    ports:
+      - "6379:6379"
+    volumes:
+      - valkey_data:/data
+    command: >
+      valkey-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - twitor-network
+
+volumes:
+  valkey_data:
+    driver: local
+
+networks:
+  twitor-network:
+    driver: bridge

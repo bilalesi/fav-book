@@ -2,11 +2,8 @@ import { generateObject } from "ai";
 import { z } from "zod";
 import prisma from "@favy/db";
 
-import {
-  createLMStudioClient,
-  getLMStudioConfig,
-  createAIServiceError,
-} from "../client";
+import { createLMStudioClient, createAIServiceError } from "../client";
+import { getLMStudioConfig } from "../config";
 import {
   buildSummarizationPrompt,
   buildKeywordExtractionPrompt,
@@ -104,7 +101,11 @@ export class LMStudioSummarizationService implements SummarizationService {
       };
     } catch (error) {
       console.log("# # generateSummary # error:", error);
-      throw createAIServiceError(error, "Failed to generate summary");
+      throw createAIServiceError(
+        error,
+        "Failed to generate summary",
+        "lmstudio"
+      );
     }
   }
 
@@ -141,7 +142,11 @@ export class LMStudioSummarizationService implements SummarizationService {
       const data = result.object as KeywordResult;
       return data.keywords;
     } catch (error) {
-      throw createAIServiceError(error, "Failed to extract keywords");
+      throw createAIServiceError(
+        error,
+        "Failed to extract keywords",
+        "lmstudio"
+      );
     }
   }
 }

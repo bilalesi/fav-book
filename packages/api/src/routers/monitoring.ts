@@ -156,45 +156,42 @@ export const monitoringRouter = {
     };
   }),
 
-  storage: protectedProcedure
-    .input(
-      z.object({
-        userId: z.string(),
-      })
-    )
-    .handler(async ({ input: { userId } }) => {
-      const result = await prisma.downloadedMedia.aggregate({
-        where: { bookmarkPost: { userId } },
-        _sum: {
-          fileSize: true,
-        },
-        _count: true,
-      });
+  storage: protectedProcedure.handler(async ({ context }) => {
+    const userId = context.session.user.id;
 
-      const totalBytes = Number(result._sum.fileSize || 0);
-      const maxBytes = getMaxStorageBytes();
-      const usagePercent = (totalBytes / maxBytes) * 100;
+    const result = await prisma.downloadedMedia.aggregate({
+      where: { bookmarkPost: { userId } },
+      _sum: {
+        fileSize: true,
+      },
+      _count: true,
+    });
 
-      const byType = await prisma.downloadedMedia.groupBy({
-        by: ["type"],
-        _sum: {
-          fileSize: true,
-        },
-        _count: true,
-      });
+    const totalBytes = Number(result._sum.fileSize || 0);
+    const maxBytes = getMaxStorageBytes();
+    const usagePercent = (totalBytes / maxBytes) * 100;
 
-      return {
-        totalBytes,
-        maxBytes,
-        usagePercent,
-        fileCount: result._count,
-        byType: byType.map((t) => ({
-          type: t.type,
-          _count: t._count,
-          _sum: { fileSize: t._sum.fileSize },
-        })),
-      };
-    }),
+    const byType = await prisma.downloadedMedia.groupBy({
+      by: ["type"],
+      where: { bookmarkPost: { userId } },
+      _sum: {
+        fileSize: true,
+      },
+      _count: true,
+    });
+
+    return {
+      totalBytes,
+      maxBytes,
+      usagePercent,
+      fileCount: result._count,
+      byType: byType.map((t) => ({
+        type: t.type,
+        _count: t._count,
+        _sum: { fileSize: t._sum.fileSize },
+      })),
+    };
+  }),
 
   timeline: protectedProcedure
     .input(
@@ -222,17 +219,25 @@ export const monitoringRouter = {
     }),
 
   health: protectedProcedure.handler(async () => {
+    // Detect which services are configured
+    const aiProvider = (process.env.AI_PROVIDER || "ollama").toLowerCase();
+    const workflowOrchestrator = process.env.RESTATE_RUNTIME_ENDPOINT
+      ? "restate"
+      : "trigger";
+
     const checks = await Promise.allSettled([
-      checkRestateHealth(),
-      checkLMStudioHealth(),
+      workflowOrchestrator === "restate"
+        ? checkRestateHealth()
+        : checkTriggerHealth(),
+      aiProvider === "ollama" ? checkOllamaHealth() : checkLMStudioHealth(),
       checkCobaltHealth(),
       checkStorageHealth(),
       checkDatabaseHealth(),
     ]);
 
     const health = {
-      restate: getCheckResult(checks[0]),
-      lmStudio: getCheckResult(checks[1]),
+      [workflowOrchestrator]: getCheckResult(checks[0]),
+      [aiProvider]: getCheckResult(checks[1]),
       cobalt: getCheckResult(checks[2]),
       storage: getCheckResult(checks[3]),
       database: getCheckResult(checks[4]),
@@ -283,6 +288,76 @@ export const monitoringRouter = {
         error: error instanceof Error ? error.message : "Unknown error",
       };
     }
+  }),
+
+  serviceConfig: protectedProcedure.handler(async () => {
+    // Detect AI provider
+    const aiProvider = (process.env.AI_PROVIDER || "ollama").toLowerCase();
+    const aiProviderUrl =
+      aiProvider === "ollama"
+        ? process.env.OLLAMA_API_URL || "http://localhost:11434"
+        : process.env.LM_STUDIO_API_URL || "http://localhost:1234/v1";
+    const aiModel =
+      aiProvider === "ollama"
+        ? process.env.OLLAMA_MODEL || "llama3.2:3b"
+        : process.env.LM_STUDIO_MODEL || "llama-3.2-3b-instruct";
+
+    // Detect workflow orchestrator
+    const workflowOrchestrator = process.env.RESTATE_RUNTIME_ENDPOINT
+      ? "restate"
+      : "trigger";
+    const workflowUrl =
+      workflowOrchestrator === "restate"
+        ? process.env.RESTATE_RUNTIME_ENDPOINT || "http://localhost:8080"
+        : process.env.TRIGGER_API_URL || "http://localhost:8030";
+
+    // Check AI provider health
+    let aiHealthy = false;
+    try {
+      const aiCheckUrl =
+        aiProvider === "ollama"
+          ? `${aiProviderUrl}/api/tags`
+          : `${aiProviderUrl}/models`;
+
+      const response = await fetch(aiCheckUrl, {
+        signal: AbortSignal.timeout(5000),
+      });
+      aiHealthy = response.ok;
+    } catch {
+      aiHealthy = false;
+    }
+
+    // Check workflow orchestrator health
+    let workflowHealthy = false;
+    try {
+      const workflowCheckUrl =
+        workflowOrchestrator === "restate"
+          ? `${
+              process.env.RESTATE_ADMIN_ENDPOINT || "http://localhost:9070"
+            }/health`
+          : `${workflowUrl}/health`;
+
+      const response = await fetch(workflowCheckUrl, {
+        signal: AbortSignal.timeout(5000),
+      });
+      workflowHealthy = response.ok;
+    } catch {
+      workflowHealthy = false;
+    }
+
+    return {
+      ai: {
+        provider: aiProvider,
+        url: aiProviderUrl,
+        model: aiModel,
+        healthy: aiHealthy,
+      },
+      workflow: {
+        orchestrator: workflowOrchestrator,
+        url: workflowUrl,
+        healthy: workflowHealthy,
+      },
+    };
   }),
 };
 
@@ -478,6 +553,35 @@ async function checkLMStudioHealth(): Promise<boolean> {
       signal: AbortSignal.timeout(5000),
     });
     return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function checkOllamaHealth(): Promise<boolean> {
+  try {
+    const ollamaUrl = process.env.OLLAMA_API_URL || "http://localhost:11434";
+
+    const response = await fetch(`${ollamaUrl}/api/tags`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function checkTriggerHealth(): Promise<boolean> {
+  try {
+    const triggerUrl = process.env.TRIGGER_API_URL || "http://localhost:8030";
+
+    // Trigger.dev doesn't have a standard health endpoint, so we check the base URL
+    const response = await fetch(triggerUrl, {
+      signal: AbortSignal.timeout(5000),
+      redirect: "manual",
+    });
+    // Accept any response (including redirects) as a sign the service is up
+    return response.status < 500;
   } catch {
     return false;
   }

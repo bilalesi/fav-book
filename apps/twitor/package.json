@@ -1,0 +1,15 @@
+{
+    "name": "twitor",
+    "version": "1.0.0",
+    "private": true,
+    "description": "Twitter bookmark crawler service",
+    "scripts": {
+        "dev": "uv run uvicorn src.main:app --reload --port 8001 --host 0.0.0.0",
+        "build": "uv sync",
+        "test": "uv run pytest",
+        "test:watch": "uv run pytest-watch",
+        "check-types": "uv run mypy src/",
+        "lint": "uv run ruff check src/",
+        "format": "uv run ruff format src/"
+    }
+}

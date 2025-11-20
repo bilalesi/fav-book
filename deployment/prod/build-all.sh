@@ -35,6 +35,7 @@ SEQUENTIAL=false
 SKIP_WEB=false
 SKIP_SERVER=false
 SKIP_RESTATE=false
+SKIP_TWITOR=false
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -55,6 +56,10 @@ while [[ $# -gt 0 ]]; do
             SKIP_RESTATE=true
             shift
             ;;
+        --skip-twitor)
+            SKIP_TWITOR=true
+            shift
+            ;;
         --help)
             echo "Usage: $0 [OPTIONS]"
             echo ""
@@ -63,6 +68,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --skip-web      Skip building web application"
             echo "  --skip-server   Skip building API server"
             echo "  --skip-restate  Skip building Restate worker"
+            echo "  --skip-twitor   Skip building Twitor service"
             echo "  --help          Show this help message"
             echo ""
             exit 0
@@ -114,6 +120,9 @@ fi
 if [ "$SKIP_RESTATE" = false ]; then
     SERVICES_TO_BUILD+=("restate")
 fi
+if [ "$SKIP_TWITOR" = false ]; then
+    SERVICES_TO_BUILD+=("twitor")
+fi
 
 # Check if any services to build
 if [ ${#SERVICES_TO_BUILD[@]} -eq 0 ]; then
@@ -133,7 +142,7 @@ if [ "$SEQUENTIAL" = true ]; then
     echo -e "${YELLOW}Building services sequentially...${NC}"
     echo ""
     
-    # Build in order: web, server, restate
+    # Build in order: web, server, restate, twitor
     for service in "${SERVICES_TO_BUILD[@]}"; do
         case $service in
             web)
@@ -148,10 +157,14 @@ if [ "$SEQUENTIAL" = true ]; then
                 run_build "Restate Worker" "${SCRIPT_DIR}/build-restate-worker.sh" || true
                 echo ""
                 ;;
+            twitor)
+                run_build "Twitor Service" "${SCRIPT_DIR}/build-twitor.sh" || true
+                echo ""
+                ;;
         esac
     done
 else
-    # Parallel build (web can build independently, server and restate share dependencies)
+    # Parallel build (web and twitor can build independently, server and restate share dependencies)
     echo -e "${YELLOW}Building services in parallel where possible...${NC}"
     echo ""
     
@@ -160,6 +173,13 @@ else
     if [[ " ${SERVICES_TO_BUILD[*]} " =~ " web " ]]; then
         (run_build "Web Application" "${SCRIPT_DIR}/build-web.sh") &
         WEB_PID=$!
+    fi
+    
+    # Start twitor build in background if needed
+    TWITOR_PID=""
+    if [[ " ${SERVICES_TO_BUILD[*]} " =~ " twitor " ]]; then
+        (run_build "Twitor Service" "${SCRIPT_DIR}/build-twitor.sh") &
+        TWITOR_PID=$!
     fi
     
     # Build server and restate sequentially (they share Prisma dependency)
@@ -182,6 +202,19 @@ else
             echo -e "${RED}✗ Web build failed${NC}"
             BUILD_FAILED=true
             FAILED_SERVICES+=("Web Application")
+        fi
+        echo ""
+    fi
+    
+    # Wait for twitor build to complete
+    if [ -n "$TWITOR_PID" ]; then
+        echo -e "${YELLOW}Waiting for twitor build to complete...${NC}"
+        if wait $TWITOR_PID; then
+            echo -e "${GREEN}✓ Twitor build completed${NC}"
+        else
+            echo -e "${RED}✗ Twitor build failed${NC}"
+            BUILD_FAILED=true
+            FAILED_SERVICES+=("Twitor Service")
         fi
         echo ""
     fi
@@ -217,6 +250,7 @@ else
     echo -e "   docker build -f deployment/docker/Dockerfile.web -t fav-book-web:latest ."
     echo -e "   docker build -f deployment/docker/Dockerfile.server -t fav-book-server:latest ."
     echo -e "   docker build -f deployment/docker/Dockerfile.restate-worker -t fav-book-restate-worker:latest ."
+    echo -e "   docker build -f deployment/docker/Dockerfile.twitor -t fav-book-twitor:latest ."
     echo ""
     echo -e "2. Deploy to production:"
     echo -e "   cd deployment/prod && docker-compose up -d"
