@@ -14,7 +14,7 @@ export function useCollectionsList() {
 export function useCollection(id: string) {
   return useQuery({
     queryKey: ["collections", "get", id],
-    queryFn: () => client.collections.get({ id }),
+    queryFn: () => client.collections.retrieve({ id }),
     enabled: !!id, // Only run query if id exists
   });
 }
@@ -79,6 +79,6 @@ export function useRemoveBookmarkFromCollection() {
     }: {
       collectionId: string;
       bookmarkId: string;
-    }) => client.collections.removeBookmark({ collectionId, bookmarkId }),
+    }) => client.collections.remove_bookmark({ collectionId, bookmarkId }),
   });
 }

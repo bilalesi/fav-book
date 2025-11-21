@@ -14,8 +14,8 @@ export function BookmarkCardTwitter({ bookmark }: BookmarkCardTwitterProps) {
   };
 
   const platformBadge = (
-    <Badge variant="default" aria-label="Platform: Twitter">
-      Twitter
+    <Badge variant="primary" aria-label="Platform: Twitter">
+      Twitter le
     </Badge>
   );
 

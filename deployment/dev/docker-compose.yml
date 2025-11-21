@@ -26,7 +26,7 @@ services:
       - postgres-data:/var/lib/postgresql
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d bookmarks_dev"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d bookmarks_dev" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -56,7 +56,7 @@ services:
       - "host.docker.internal:host-gateway"
 
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9070/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:9070/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -68,6 +68,31 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+  cobalt:
+    image: ghcr.io/imputnet/cobalt:latest
+    container_name: cobalt-api
+    restart: unless-stopped
+    environment:
+      API_URL: http://cobalt:9000
+      API_NAME: "Bookmark Media Downloader"
+      CORS_WILDCARD: "true"
+      CORS_URL: "*"
+    ports:
+      - "9002:9000"
+    networks:
+      - bookmarks-dev
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9000/api/serverInfo" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    labels:
+      - com.centurylinklabs.watchtower.scope=cobalt
+    volumes:
+      - ./cobalt-data/cookies.json:/cookies.json
 
   valkey:
     image: valkey/valkey:7-alpine
@@ -81,13 +106,10 @@ services:
       - valkey-data:/data
 
     command: >
-      valkey-server
-      --appendonly yes
-      --maxmemory 256mb
-      --maxmemory-policy allkeys-lru
+      valkey-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
 
     healthcheck:
-      test: ["CMD", "valkey-cli", "ping"]
+      test: [ "CMD", "valkey-cli", "ping" ]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -141,12 +163,12 @@ services:
       - "8001:8001"
       # Note: Port 9080 removed - local Restate worker uses this port
 
-    # Allow container to reach host machine
+      # Allow container to reach host machine
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8001/health" ]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -163,6 +185,12 @@ services:
       restate:
         condition: service_healthy
 
+  watchtower:
+    image: ghcr.io/containrrr/watchtower
+    restart: unless-stopped
+    command: --cleanup --scope cobalt --interval 900 --include-restarting
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 volumes:
   postgres-data:
     name: bookmarks-dev-postgres-data
@@ -174,6 +202,10 @@ volumes:
 
   valkey-data:
     name: bookmarks-dev-valkey-data
+    driver: local
+
+  cobalt-data:
+    name: bookmarks-dev-cobalt-data
     driver: local
 
 networks:

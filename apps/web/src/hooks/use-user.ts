@@ -5,7 +5,7 @@ import { toast } from "sonner";
 export function useUserProfile() {
   return useQuery({
     queryKey: ["user", "profile"],
-    queryFn: () => client.user.getProfile(),
+    queryFn: () => client.user.retrieve_profile(),
   });
 }
 
@@ -17,7 +17,7 @@ export function useUpdatePreferences() {
       defaultView?: "card" | "table";
       itemsPerPage?: number;
       theme?: "light" | "dark" | "system";
-    }) => client.user.updatePreferences(preferences),
+    }) => client.user.update_preferences(preferences),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user", "profile"] });
       toast.success("Preferences updated successfully");
@@ -33,7 +33,7 @@ export function useUpdateProfile() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: { name?: string }) => client.user.updateProfile(data),
+    mutationFn: (data: { name?: string }) => client.user.update_profile(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user", "profile"] });
       toast.success("Profile updated successfully");

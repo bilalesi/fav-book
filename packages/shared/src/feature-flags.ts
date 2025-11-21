@@ -6,7 +6,7 @@
 /**
  * Feature flags interface defining all available feature toggles
  */
-export interface FeatureFlags {
+export interface IFeatureFlags {
   /** Enable/disable AI-powered content summarization */
   ENABLE_AI_SUMMARIZATION: boolean;
   /** Enable/disable media download functionality */
@@ -24,7 +24,7 @@ export interface FeatureFlags {
 /**
  * Default feature flag values
  */
-export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
+export const DEFAULT_FEATURE_FLAGS: IFeatureFlags = {
   ENABLE_AI_SUMMARIZATION: true,
   ENABLE_MEDIA_DOWNLOAD: true,
   MAX_MEDIA_SIZE_MB: 500,
@@ -36,13 +36,13 @@ export const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
 /**
  * Feature flag names for type-safe access
  */
-export type FeatureFlagName = keyof FeatureFlags;
+export type TFeatureFlagName = keyof IFeatureFlags;
 
 /**
  * Validation rules for feature flags
  */
 const VALIDATION_RULES: Record<
-  FeatureFlagName,
+  TFeatureFlagName,
   (value: any) => { valid: boolean; error?: string }
 > = {
   ENABLE_AI_SUMMARIZATION: (value) => ({
@@ -125,8 +125,8 @@ const VALIDATION_RULES: Record<
  * @param value - Value to validate
  * @returns Validation result with error message if invalid
  */
-export function validateFeatureFlag(
-  name: FeatureFlagName,
+export function validate_feature_flag(
+  name: TFeatureFlagName,
   value: any
 ): { valid: boolean; error?: string } {
   const validator = VALIDATION_RULES[name];
@@ -142,12 +142,12 @@ export function validateFeatureFlag(
  * @returns Array of validation errors (empty if all valid)
  */
 export function validateFeatureFlags(
-  flags: Partial<FeatureFlags>
+  flags: Partial<IFeatureFlags>
 ): Array<{ flag: string; error: string }> {
   const errors: Array<{ flag: string; error: string }> = [];
 
   for (const [key, value] of Object.entries(flags)) {
-    const result = validateFeatureFlag(key as FeatureFlagName, value);
+    const result = validate_feature_flag(key as TFeatureFlagName, value);
     if (!result.valid && result.error) {
       errors.push({ flag: key, error: result.error });
     }
@@ -159,7 +159,7 @@ export function validateFeatureFlags(
 /**
  * Parses environment variable value to appropriate type
  */
-function parseEnvValue(key: FeatureFlagName, value: string | undefined): any {
+function parseEnvValue(key: TFeatureFlagName, value: string | undefined): any {
   if (value === undefined) {
     return DEFAULT_FEATURE_FLAGS[key];
   }
@@ -186,8 +186,8 @@ function parseEnvValue(key: FeatureFlagName, value: string | undefined): any {
  * Falls back to default values if not set or invalid
  * @returns Complete feature flags configuration
  */
-export function loadFeatureFlagsFromEnv(): FeatureFlags {
-  const flags: FeatureFlags = {
+export function loadFeatureFlagsFromEnv(): IFeatureFlags {
+  const flags: IFeatureFlags = {
     ENABLE_AI_SUMMARIZATION: parseEnvValue(
       "ENABLE_AI_SUMMARIZATION",
       process.env.ENABLE_AI_SUMMARIZATION
@@ -235,14 +235,14 @@ export function loadFeatureFlagsFromEnv(): FeatureFlags {
  * In-memory feature flags cache
  * Loaded once at startup and can be updated at runtime
  */
-let featureFlagsCache: FeatureFlags | null = null;
+let featureFlagsCache: IFeatureFlags | null = null;
 
 /**
  * Gets the current feature flags configuration
  * Loads from environment on first call, then returns cached value
  * @returns Current feature flags
  */
-export function getFeatureFlags(): FeatureFlags {
+export function getFeatureFlags(): IFeatureFlags {
   if (!featureFlagsCache) {
     featureFlagsCache = loadFeatureFlagsFromEnv();
   }
@@ -254,9 +254,9 @@ export function getFeatureFlags(): FeatureFlags {
  * @param name - Feature flag name
  * @returns Feature flag value
  */
-export function getFeatureFlag<K extends FeatureFlagName>(
+export function getFeatureFlag<K extends TFeatureFlagName>(
   name: K
-): FeatureFlags[K] {
+): IFeatureFlags[K] {
   const flags = getFeatureFlags();
   return flags[name];
 }
@@ -267,7 +267,7 @@ export function getFeatureFlag<K extends FeatureFlagName>(
  * @param updates - Partial feature flags to update
  * @throws Error if validation fails
  */
-export function updateFeatureFlags(updates: Partial<FeatureFlags>): void {
+export function updateFeatureFlags(updates: Partial<IFeatureFlags>): void {
   const errors = validateFeatureFlags(updates);
   if (errors.length > 0) {
     throw new Error(

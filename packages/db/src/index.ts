@@ -7,5 +7,5 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 export default prisma;
-export { Prisma };
+export { Prisma, prisma };
 export * from "../prisma/generated/enums";

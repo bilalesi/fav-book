@@ -30,7 +30,7 @@ export function BookmarkCardBase({
       day: "numeric",
     });
   };
-
+  console.log('——bookmark', bookmark)
   // Prefetch bookmark details on hover
   const handleMouseEnter = () => {
     queryClient.prefetchQuery({

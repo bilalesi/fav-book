@@ -1,17 +1,16 @@
 import type {
-  AIProvider,
   LMStudioConfig,
   OllamaConfig,
   ProviderConfig,
 } from "./types";
 import { AIErrorCode, AIServiceError } from "./types";
-
+import { DictAiProvider, type TAiProvider } from "@favy/shared";
 /**
  * Environment variable definitions and defaults
  */
 
-// Provider selection
-const DEFAULT_PROVIDER: AIProvider = "ollama";
+
+const DEFAULT_PROVIDER: TAiProvider = DictAiProvider.OLLAMA;
 
 // LMStudio defaults
 const DEFAULT_LM_STUDIO_API_URL = "http://localhost:1234/v1";
@@ -32,14 +31,14 @@ const DEFAULT_STRICT_MODE = false;
 /**
  * Detect which provider to use from environment variables
  */
-export function detectProvider(): AIProvider {
+export function detect_provider(): TAiProvider {
   const providerEnv = process.env.AI_PROVIDER?.toLowerCase();
 
   if (!providerEnv) {
     return DEFAULT_PROVIDER;
   }
 
-  if (providerEnv === "lmstudio" || providerEnv === "ollama") {
+  if (providerEnv === DictAiProvider.LMSTUDIO || providerEnv === DictAiProvider.OLLAMA) {
     return providerEnv;
   }
 
@@ -53,7 +52,7 @@ export function detectProvider(): AIProvider {
 /**
  * Get LMStudio configuration from environment variables
  */
-export function getLMStudioConfig(): LMStudioConfig {
+export function get_lmstudio_config(): LMStudioConfig {
   const apiUrl = process.env.LM_STUDIO_API_URL || DEFAULT_LM_STUDIO_API_URL;
   const model = process.env.LM_STUDIO_MODEL || DEFAULT_LM_STUDIO_MODEL;
 
@@ -93,7 +92,7 @@ export function getLMStudioConfig(): LMStudioConfig {
 /**
  * Get Ollama configuration from environment variables
  */
-export function getOllamaConfig(): OllamaConfig {
+export function get_ollama_config(): OllamaConfig {
   const apiUrl = process.env.OLLAMA_API_URL || DEFAULT_OLLAMA_API_URL;
   const model = process.env.OLLAMA_MODEL || DEFAULT_OLLAMA_MODEL;
 
@@ -134,12 +133,12 @@ export function getOllamaConfig(): OllamaConfig {
 /**
  * Get provider configuration based on provider type
  */
-export function getProviderConfig(provider: AIProvider): ProviderConfig {
+export function get_provider_config(provider: TAiProvider): ProviderConfig {
   switch (provider) {
-    case "lmstudio":
-      return getLMStudioConfig();
-    case "ollama":
-      return getOllamaConfig();
+    case DictAiProvider.LMSTUDIO:
+      return get_lmstudio_config();
+    case DictAiProvider.OLLAMA:
+      return get_ollama_config();
     default:
       throw new AIServiceError(
         `Unknown provider: ${provider}`,
@@ -152,7 +151,7 @@ export function getProviderConfig(provider: AIProvider): ProviderConfig {
 /**
  * Check if validation should run on startup
  */
-export function shouldValidateOnStartup(): boolean {
+export function should_validate_on_startup(): boolean {
   const envValue = process.env.AI_PROVIDER_VALIDATE_ON_STARTUP;
   if (envValue === undefined) {
     return DEFAULT_VALIDATE_ON_STARTUP;
@@ -163,7 +162,7 @@ export function shouldValidateOnStartup(): boolean {
 /**
  * Check if strict mode is enabled (fail on validation errors)
  */
-export function isStrictMode(): boolean {
+export function is_strict_mode(): boolean {
   const envValue = process.env.AI_PROVIDER_STRICT_MODE;
   if (envValue === undefined) {
     return DEFAULT_STRICT_MODE;

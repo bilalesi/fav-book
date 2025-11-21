@@ -1,27 +1,27 @@
-export interface SummaryOptions {
+import type { TAiProvider } from "@favy/shared";
+
+export interface ISummaryOptions {
   maxLength?: number;
   keywordCount?: number;
   tagCount?: number;
   temperature?: number;
 }
 
-export interface SummaryResult {
+export interface ISummaryResult {
   summary: string;
   keywords: string[];
   tags: Array<{ id: string; name: string }>;
   tokensUsed?: number;
 }
 
-export interface SummarizationService {
-  generateSummary(
+export interface ISummarizationService {
+  make_summary(
     content: string,
-    options?: SummaryOptions
-  ): Promise<SummaryResult>;
-  extractKeywords(content: string, count?: number): Promise<string[]>;
+    options?: ISummaryOptions
+  ): Promise<ISummaryResult>;
+  extract_keywords(content: string, count?: number): Promise<string[]>;
 }
 
-// Provider types
-export type AIProvider = "lmstudio" | "ollama";
 
 // Base configuration shared by all providers
 export interface BaseProviderConfig {
@@ -76,7 +76,7 @@ export class AIServiceError extends Error {
     message: string,
     public readonly code: AIErrorCode | string,
     public readonly retryable: boolean = false,
-    public readonly provider?: AIProvider
+    public readonly provider?: TAiProvider
   ) {
     super(message);
     this.name = "AIServiceError";

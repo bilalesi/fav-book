@@ -3,15 +3,15 @@ import prisma from "@favy/db";
 
 import type { AIProviderClient } from "../providers";
 import {
-  buildSummarizationPrompt,
-  buildKeywordExtractionPrompt,
-  createSummarizationSchema,
+  build_summarization_prompt,
+  build_keyword_extraction_prompt,
+  make_summarization_schema,
   keywordSchema,
 } from "../prompts/summarization";
 import type {
-  SummarizationService,
-  SummaryOptions,
-  SummaryResult,
+  ISummarizationService,
+  ISummaryOptions,
+  ISummaryResult,
   ProviderConfig,
 } from "../types";
 import { AIServiceError, AIErrorCode } from "../types";
@@ -21,7 +21,7 @@ import { AIServiceError, AIErrorCode } from "../types";
  * This service provides consistent summarization and keyword extraction capabilities
  * regardless of the underlying provider (LMStudio, Ollama, etc.).
  */
-export class UnifiedSummarizationService implements SummarizationService {
+export class UnifiedSummarizationService implements ISummarizationService {
   private client: AIProviderClient;
   private config: ProviderConfig;
 
@@ -41,29 +41,17 @@ export class UnifiedSummarizationService implements SummarizationService {
    * @param options - Optional summarization options
    * @returns Promise with summary result including keywords and tags
    */
-  async generateSummary(
+  async make_summary(
     content: string,
-    options?: SummaryOptions
-  ): Promise<SummaryResult> {
+    options?: ISummaryOptions
+  ): Promise<ISummaryResult> {
     try {
-      // Validate input
-      if (!content || content.trim().length === 0) {
-        throw new AIServiceError(
-          "Content cannot be empty",
-          AIErrorCode.INVALID_INPUT,
-          false,
-          this.config.provider
-        );
-      }
-
-      // Truncate content if too long
       const maxContentLength = 10000; // ~2500 tokens
       const truncatedContent =
         content.length > maxContentLength
           ? content.substring(0, maxContentLength) + "..."
           : content;
 
-      // Fetch allowed categories from database
       const allowedTags = (await prisma.category.findMany()).map((v) => ({
         id: v.id,
         name: v.name,
@@ -75,18 +63,15 @@ export class UnifiedSummarizationService implements SummarizationService {
         "tags"
       );
 
-      // Build prompt with allowed tags
-      const prompt = buildSummarizationPrompt(
+      const prompt = build_summarization_prompt(
         truncatedContent,
         options,
         allowedTags
       );
 
-      // Create dynamic schema with allowed tag IDs for strict validation
-      const dynamicSchema = createSummarizationSchema(allowedTags);
+      const dynamicSchema = make_summarization_schema(allowedTags);
 
-      // Generate structured output using the provider client
-      const result = await this.client.generateStructuredOutput({
+      const result = await this.client.make_typed_output({
         prompt,
         schema: dynamicSchema,
         systemPrompt:
@@ -97,7 +82,6 @@ export class UnifiedSummarizationService implements SummarizationService {
         temperature: options?.temperature ?? this.config.temperature,
       });
 
-      // Type the result
       const data = result.object as {
         summary: string;
         keywords: string[];
@@ -121,15 +105,12 @@ export class UnifiedSummarizationService implements SummarizationService {
     } catch (error) {
       console.error(`[${this.config.provider}] generateSummary: error:`, error);
 
-      // If it's already an AIServiceError, rethrow it
       if (error instanceof AIServiceError) {
         throw error;
       }
 
-      // Otherwise, wrap it in an AIServiceError
       throw new AIServiceError(
-        `Failed to generate summary: ${
-          error instanceof Error ? error.message : String(error)
+        `Failed to generate summary: ${error instanceof Error ? error.message : String(error)
         }`,
         AIErrorCode.INVALID_RESPONSE,
         false,
@@ -144,33 +125,19 @@ export class UnifiedSummarizationService implements SummarizationService {
    * @param count - Number of keywords to extract (default: 10)
    * @returns Promise with array of keyword strings
    */
-  async extractKeywords(
+  async extract_keywords(
     content: string,
     count: number = 10
   ): Promise<string[]> {
     try {
-      // Validate input
-      if (!content || content.trim().length === 0) {
-        throw new AIServiceError(
-          "Content cannot be empty",
-          AIErrorCode.INVALID_INPUT,
-          false,
-          this.config.provider
-        );
-      }
-
-      // Truncate content if too long
       const maxContentLength = 10000;
       const truncatedContent =
         content.length > maxContentLength
           ? content.substring(0, maxContentLength) + "..."
           : content;
 
-      // Build prompt
-      const prompt = buildKeywordExtractionPrompt(truncatedContent, count);
-
-      // Generate structured output using the provider client
-      const result = await this.client.generateStructuredOutput({
+      const prompt = build_keyword_extraction_prompt(truncatedContent, count);
+      const result = await this.client.make_typed_output({
         prompt,
         schema: keywordSchema,
         maxTokens: 500, // Keywords should be short
@@ -188,15 +155,12 @@ export class UnifiedSummarizationService implements SummarizationService {
     } catch (error) {
       console.error(`[${this.config.provider}] extractKeywords: error:`, error);
 
-      // If it's already an AIServiceError, rethrow it
       if (error instanceof AIServiceError) {
         throw error;
       }
 
-      // Otherwise, wrap it in an AIServiceError
       throw new AIServiceError(
-        `Failed to extract keywords: ${
-          error instanceof Error ? error.message : String(error)
+        `Failed to extract keywords: ${error instanceof Error ? error.message : String(error)
         }`,
         AIErrorCode.INVALID_RESPONSE,
         false,

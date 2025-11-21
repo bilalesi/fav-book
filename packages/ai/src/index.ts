@@ -1,63 +1,54 @@
 // Export types
 export type {
-  SummaryOptions,
-  SummaryResult,
-  SummarizationService,
+  ISummaryOptions as SummaryOptions,
+  ISummaryResult as SummaryResult,
+  ISummarizationService as SummarizationService,
   LMStudioConfig,
   OllamaConfig,
   ProviderConfig,
-  AIProvider,
   BaseProviderConfig,
 } from "./types";
 export { AIServiceError, AIErrorCode } from "./types";
 
 // Export configuration utilities
 export {
-  detectProvider,
-  getLMStudioConfig,
-  getOllamaConfig,
-  getProviderConfig,
-  shouldValidateOnStartup,
-  isStrictMode,
+  detect_provider,
+  get_lmstudio_config,
+  get_ollama_config,
+  get_provider_config,
+  should_validate_on_startup,
+  is_strict_mode,
 } from "./config";
 
 // Export provider interface and utilities
 export type { AIProviderClient } from "./providers";
 export {
-  isRetryableError,
-  mapErrorToCode,
-  createAIServiceError,
+  is_retryable_error,
+  map_error_to_code,
+  create_ai_service_error,
+  validate_content,
+  validate_truncate_content,
+  validate_model_availability,
+  validate_api_url,
+  validate_configuration,
+  create_timeout_signal,
+  assess_connection_response,
   BaseErrorMapper,
-  validateContent,
-  validateAndTruncateContent,
-  validateModelAvailability,
-  validateApiUrl,
-  validateConfiguration,
-  createTimeoutSignal,
-  validateConnectionResponse,
   LMStudioClient,
   OllamaClient,
 } from "./providers";
 
-// Export client utilities (legacy - will be replaced by provider implementations)
-export { createLMStudioClient, validateLMStudioConnection } from "./client";
 
 // Export prompt utilities and schemas
 export {
-  buildSummarizationPrompt,
-  buildKeywordExtractionPrompt,
-  buildTagExtractionPrompt,
+  build_summarization_prompt,
+  build_keyword_extraction_prompt,
+  build_tag_extraction_prompt,
   summarizationSchema,
   keywordSchema,
   tagSchema,
 } from "./prompts/summarization";
 
-// Export services
-export {
-  LMStudioSummarizationService,
-  createSummarizationService as createLegacySummarizationService,
-} from "./services/summarization";
 export { UnifiedSummarizationService } from "./services/unified-summarization";
 
-// Export factory function (new unified approach)
-export { createSummarizationService } from "./factory";
+export { make_summarization_service } from "./factory";

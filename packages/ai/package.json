@@ -14,19 +14,23 @@
     "scripts": {
         "build": "tsdown",
         "test": "vitest --run",
-        "test:watch": "vitest"
+        "test:watch": "vitest",
+        "format": "biome check --write ."
     },
     "devDependencies": {
         "tsdown": "catalog:",
         "vitest": "^4.0.9",
-        "vite": "^7.0.2"
+        "vite": "^7.0.2",
+        "@biomejs/biome": "^2.3.7"
     },
     "peerDependencies": {
         "typescript": "^5"
     },
     "dependencies": {
         "@ai-sdk/openai-compatible": "^1.0.27",
+        "@ai-sdk/provider": "^2.0.0",
         "@favy/db": "workspace:*",
+        "@favy/shared": "workspace:*",
         "ai": "^5.0.93",
         "dotenv": "catalog:",
         "ollama-ai-provider-v2": "^1.5.5",

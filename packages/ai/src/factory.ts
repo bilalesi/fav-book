@@ -1,14 +1,15 @@
-import type { SummarizationService, AIProvider, ProviderConfig } from "./types";
+import type { ISummarizationService, ProviderConfig } from "./types";
 import { AIServiceError, AIErrorCode } from "./types";
 import {
-  detectProvider,
-  getProviderConfig,
-  shouldValidateOnStartup,
-  isStrictMode,
+  detect_provider,
+  get_provider_config,
+  should_validate_on_startup,
+  is_strict_mode,
 } from "./config";
-import { LMStudioClient } from "./providers/lmstudio-client";
-import { OllamaClient } from "./providers/ollama-client";
+import { LMStudioClient } from "./providers/lmstudio/lmstudio-client";
+import { OllamaClient } from "./providers/ollama/ollama-client";
 import { UnifiedSummarizationService } from "./services/unified-summarization";
+import { DictAiProvider, type TAiProvider } from "@favy/shared";
 
 /**
  * Create a summarization service with the appropriate provider based on environment configuration.
@@ -38,16 +39,15 @@ import { UnifiedSummarizationService } from "./services/unified-summarization";
  * });
  * ```
  */
-export async function createSummarizationService(
+export async function make_summarization_service(
   overrideConfig?: Partial<ProviderConfig>
-): Promise<SummarizationService> {
+): Promise<ISummarizationService> {
   // Step 1: Detect provider
-  const provider: AIProvider = overrideConfig?.provider ?? detectProvider();
+  const provider: TAiProvider = overrideConfig?.provider ?? detect_provider();
 
   console.log(`[Factory] Detected provider: ${provider}`);
 
-  // Step 2: Load configuration
-  const baseConfig = getProviderConfig(provider);
+  const baseConfig = get_provider_config(provider);
   const config: ProviderConfig = overrideConfig
     ? { ...baseConfig, ...overrideConfig }
     : baseConfig;
@@ -60,11 +60,10 @@ export async function createSummarizationService(
     temperature: config.temperature,
   });
 
-  // Step 3: Instantiate the appropriate client
   let client;
-  if (config.provider === "lmstudio") {
+  if (config.provider === DictAiProvider.LMSTUDIO) {
     client = new LMStudioClient(config);
-  } else if (config.provider === "ollama") {
+  } else if (config.provider === DictAiProvider.OLLAMA) {
     client = new OllamaClient(config);
   } else {
     // This should never happen due to type checking, but handle it anyway
@@ -77,9 +76,8 @@ export async function createSummarizationService(
 
   console.log(`[Factory] Client instantiated: ${config.provider}`);
 
-  // Step 4: Validate connection (if enabled)
-  const shouldValidate = shouldValidateOnStartup();
-  const strictMode = isStrictMode();
+  const shouldValidate = should_validate_on_startup();
+  const strictMode = is_strict_mode();
 
   if (shouldValidate) {
     console.log(
@@ -87,21 +85,16 @@ export async function createSummarizationService(
     );
 
     try {
-      // Validate connection
-      await client.validateConnection();
-
-      // Get and log available models
-      const models = await client.getAvailableModels();
+      await client.probe_model_connection();
+      const models = await client.retrieve_available_models();
       console.log(
         `[Factory] Available models (${models.length}):`,
         models.slice(0, 5)
       );
 
-      // Check if configured model is available
       if (!models.includes(config.model)) {
-        const message = `Configured model "${
-          config.model
-        }" not found. Available models: ${models.join(", ")}`;
+        const message = `Configured model "${config.model
+          }" not found. Available models: ${models.join(", ")}`;
         console.warn(`[Factory] ${message}`);
 
         if (strictMode) {
@@ -121,7 +114,6 @@ export async function createSummarizationService(
       console.error(`[Factory] Connection validation failed:`, errorMessage);
 
       if (strictMode) {
-        // In strict mode, throw the error
         if (error instanceof AIServiceError) {
           throw error;
         }
@@ -132,7 +124,6 @@ export async function createSummarizationService(
           config.provider
         );
       } else {
-        // In lenient mode, log warning and continue
         console.warn(
           `[Factory] Continuing despite validation failure (strict mode disabled)`
         );
@@ -142,7 +133,6 @@ export async function createSummarizationService(
     console.log(`[Factory] Connection validation disabled`);
   }
 
-  // Step 5: Create and return the unified service
   const service = new UnifiedSummarizationService(client, config);
   console.log(
     `[Factory] ✓ SummarizationService created successfully with ${config.provider}`

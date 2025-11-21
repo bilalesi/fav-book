@@ -10,7 +10,7 @@ export interface AIProviderClient {
    * @param params - Parameters for structured output generation
    * @returns Promise with the generated object and usage statistics
    */
-  generateStructuredOutput<T>(params: {
+  make_typed_output<T>(params: {
     prompt: string;
     schema: z.ZodSchema<T>;
     systemPrompt?: string;
@@ -29,11 +29,11 @@ export interface AIProviderClient {
    * Validate connection to the provider.
    * @returns Promise that resolves to true if connection is successful
    */
-  validateConnection(): Promise<boolean>;
+  probe_model_connection(): Promise<boolean>;
 
   /**
    * Get list of available models from the provider.
    * @returns Promise with array of model names
    */
-  getAvailableModels(): Promise<string[]>;
+  retrieve_available_models(): Promise<string[]>;
 }

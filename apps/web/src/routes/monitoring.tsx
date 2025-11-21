@@ -20,6 +20,7 @@ import {
   TrendingUp,
   XCircle,
 } from "lucide-react";
+import { get } from "radash";
 
 export const Route = createFileRoute("/monitoring")({
   component: MonitoringDashboard,
@@ -47,30 +48,31 @@ function MonitoringDashboard() {
   const { data: queue } = useQuery({
     queryKey: ["monitoring", "queue"],
     queryFn: () => client.monitoring.queue({}),
-    refetchInterval: 10000, // Refresh every 10s
+    refetchInterval: 10000, 
   });
 
   const { data: storage } = useQuery({
     queryKey: ["monitoring", "storage"],
     queryFn: () => client.monitoring.storage({}),
-    refetchInterval: 300000, // Refresh every 5 minutes
+    refetchInterval: 300000, 
   });
 
   const { data: health } = useQuery({
     queryKey: ["monitoring", "health"],
-    queryFn: () => client.monitoring.health({}),
+    queryFn: () => client.monitoring.probe_health({}),
     refetchInterval: 30000,
   });
-
+  console.log('———health', health)
   const { data: restateStats } = useQuery({
     queryKey: ["monitoring", "restate"],
-    queryFn: () => client.monitoring.restateStats({}),
+    queryFn: () => client.monitoring.restate_stats({}),
     refetchInterval: 30000,
   });
+  console.log('———restateStats', restateStats)
 
   const { data: serviceConfig } = useQuery({
     queryKey: ["monitoring", "serviceConfig"],
-    queryFn: () => client.monitoring.serviceConfig({}),
+    queryFn: () => client.monitoring.service_config({}),
     refetchInterval: 30000,
   });
 
@@ -203,15 +205,8 @@ function MonitoringDashboard() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <HealthIndicator
-                name={
-                  serviceConfig.workflow.orchestrator === "restate"
-                    ? "Restate"
-                    : "Trigger.dev"
-                }
-                healthy={
-                  health.services[serviceConfig.workflow.orchestrator]
-                    ?.healthy ?? false
-                }
+                name="Restate"
+                healthy={get(health.services,serviceConfig.workflow.orchestrator, false )}
               />
               <HealthIndicator
                 name={
@@ -219,21 +214,19 @@ function MonitoringDashboard() {
                     ? "Ollama"
                     : "LM Studio"
                 }
-                healthy={
-                  health.services[serviceConfig.ai.provider]?.healthy ?? false
-                }
+                healthy={get(health.services,serviceConfig.ai.provider, false )}
               />
               <HealthIndicator
                 name="Cobalt API"
-                healthy={health.services.cobalt?.healthy ?? false}
+                healthy={health.services.cobalt ?? false}
               />
               <HealthIndicator
                 name="Storage"
-                healthy={health.services.storage?.healthy ?? false}
+                healthy={health.services.storage ?? false}
               />
               <HealthIndicator
                 name="Database"
-                healthy={health.services.database?.healthy ?? false}
+                healthy={health.services.database ?? false}
               />
             </div>
           </CardContent>

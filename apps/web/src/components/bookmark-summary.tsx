@@ -5,9 +5,9 @@ import { ChevronDown, ChevronUp, Copy, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BookmarkSummaryProps {
-  summary?: string;
-  keywords?: string[];
-  tags?: string[];
+  summary: string | null;
+  keywords: Array<string>;
+  tags: Array<string>;
   className?: string;
 }
 

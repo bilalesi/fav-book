@@ -2,13 +2,13 @@
  * Shared error handling utilities for workflows
  */
 
-import { ErrorType } from "./types";
+import { ErrorType, type TErrorType } from "./types";
 
 /**
  * Determines if an error is retryable based on its type
  */
-export function isRetryableError(error: Error | ErrorType): boolean {
-  const retryableTypes: ErrorType[] = [
+export function isRetryableError(error: Error | TErrorType): boolean {
+  const retryableTypes: TErrorType[] = [
     ErrorType.NETWORK_ERROR,
     ErrorType.TIMEOUT,
     ErrorType.SERVICE_UNAVAILABLE,
@@ -25,13 +25,13 @@ export function isRetryableError(error: Error | ErrorType): boolean {
     return false;
   }
 
-  return retryableTypes.includes(error as ErrorType);
+  return retryableTypes.includes(error as TErrorType);
 }
 
 /**
  * Classifies an error into an ErrorType
  */
-export function classifyError(error: Error): ErrorType {
+export function classifyError(error: Error): TErrorType {
   const message = error.message.toLowerCase();
 
   if (message.includes("timeout")) return ErrorType.TIMEOUT;

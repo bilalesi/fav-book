@@ -16,7 +16,6 @@ COPY packages/api/package.json ./packages/api/
 COPY packages/auth/package.json ./packages/auth/
 COPY packages/db/package.json ./packages/db/
 COPY packages/shared/package.json ./packages/shared/
-COPY packages/restate/package.json ./packages/restate/
 COPY packages/trigger/package.json ./packages/trigger/
 COPY packages/ai/package.json ./packages/ai/
 COPY packages/storage/package.json ./packages/storage/

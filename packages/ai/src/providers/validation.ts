@@ -1,4 +1,5 @@
-import { AIServiceError, AIErrorCode, type AIProvider } from "../types";
+import type { TAiProvider } from "@favy/shared";
+import { AIServiceError, AIErrorCode } from "../types";
 
 /**
  * Validate that content is not empty.
@@ -6,7 +7,7 @@ import { AIServiceError, AIErrorCode, type AIProvider } from "../types";
  * @param provider - The provider context for error reporting
  * @throws AIServiceError if content is empty
  */
-export function validateContent(content: string, provider?: AIProvider): void {
+export function validate_content(content: string, provider?: TAiProvider): void {
   if (!content || content.trim().length === 0) {
     throw new AIServiceError(
       "Content cannot be empty",
@@ -23,7 +24,7 @@ export function validateContent(content: string, provider?: AIProvider): void {
  * @param maxLength - Maximum allowed length (default: 10000)
  * @returns Truncated content if necessary
  */
-export function validateAndTruncateContent(
+export function validate_truncate_content(
   content: string,
   maxLength: number = 10000
 ): string {
@@ -40,10 +41,10 @@ export function validateAndTruncateContent(
  * @param provider - The provider context for error reporting
  * @throws AIServiceError if model is not found
  */
-export function validateModelAvailability(
+export function validate_model_availability(
   modelName: string,
   availableModels: string[],
-  provider?: AIProvider
+  provider?: TAiProvider
 ): void {
   if (!availableModels.includes(modelName)) {
     throw new AIServiceError(
@@ -63,7 +64,7 @@ export function validateModelAvailability(
  * @param provider - The provider context for error reporting
  * @throws AIServiceError if URL is invalid
  */
-export function validateApiUrl(url: string, provider?: AIProvider): void {
+export function validate_api_url(url: string, provider?: TAiProvider): void {
   try {
     new URL(url);
   } catch (error) {
@@ -82,17 +83,17 @@ export function validateApiUrl(url: string, provider?: AIProvider): void {
  * @param provider - The provider context for error reporting
  * @throws AIServiceError if configuration is invalid
  */
-export function validateConfiguration(
+export function validate_configuration(
   config: {
     apiUrl?: string;
     model?: string;
     maxTokens?: number;
     temperature?: number;
   },
-  provider?: AIProvider
+  provider?: TAiProvider
 ): void {
   if (config.apiUrl) {
-    validateApiUrl(config.apiUrl, provider);
+    validate_api_url(config.apiUrl, provider);
   }
 
   if (config.model !== undefined && config.model.trim().length === 0) {
@@ -131,7 +132,7 @@ export function validateConfiguration(
  * @param timeoutMs - Timeout in milliseconds (default: 5000)
  * @returns AbortSignal that will timeout after the specified duration
  */
-export function createTimeoutSignal(timeoutMs: number = 5000): AbortSignal {
+export function create_timeout_signal(timeoutMs: number = 5000): AbortSignal {
   return AbortSignal.timeout(timeoutMs);
 }
 
@@ -142,9 +143,9 @@ export function createTimeoutSignal(timeoutMs: number = 5000): AbortSignal {
  * @returns true if connection is valid
  * @throws AIServiceError if connection fails
  */
-export function validateConnectionResponse(
+export function assess_connection_response(
   response: Response,
-  provider?: AIProvider
+  provider?: TAiProvider
 ): boolean {
   if (!response.ok) {
     const errorMessage = `Connection failed: ${response.status} ${response.statusText}`;

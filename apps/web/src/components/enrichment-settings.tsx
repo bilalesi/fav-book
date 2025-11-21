@@ -28,13 +28,13 @@ export function EnrichmentSettings() {
   // Fetch current feature flags
   const { data: flagsData, isLoading } = useQuery({
     queryKey: ["featureFlags"],
-    queryFn: () => client.featureFlags.getFlags(),
+    queryFn: () => client.feature_flags.retrieve_flags(),
   });
 
   // Check if user is admin
   const { data: adminData } = useQuery({
     queryKey: ["featureFlags", "isAdmin"],
-    queryFn: () => client.featureFlags.isAdmin(),
+    queryFn: () => client.feature_flags.is_admin(),
   });
 
   // Local state for form
@@ -58,7 +58,7 @@ export function EnrichmentSettings() {
   // Mutation to update flags
   const updateMutation = useMutation({
     mutationFn: (updates: Partial<EnrichmentSettingsData>) =>
-      client.featureFlags.updateFlags(updates),
+      client.feature_flags.update_flags(updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["featureFlags"] });
       toast.success("Enrichment settings updated successfully");

@@ -15,14 +15,15 @@ import {
   useCategoriesList,
   useAssignCategoryToBookmark,
   useRemoveCategoryFromBookmark,
+  useBookmarkCategoriesList,
 } from "@/hooks/use-categories";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Loader from "@/components/loader";
-import type { BookmarkPost } from "@favy/shared";
+import type { IBookmarkPost } from "@favy/shared";
 
 interface ManageCategoriesDialogProps {
-  bookmark: BookmarkPost;
+  bookmark: IBookmarkPost;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -33,12 +34,13 @@ export function ManageCategoriesDialog({
   onOpenChange,
 }: ManageCategoriesDialogProps) {
   const { data: categories, isLoading } = useCategoriesList();
+  const { data: bookmarkCategories } = useBookmarkCategoriesList(bookmark.id);
   const assignCategory = useAssignCategoryToBookmark();
   const removeCategory = useRemoveCategoryFromBookmark();
   const queryClient = useQueryClient();
 
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(
-    new Set(bookmark.categories?.map((c) => c.id) || [])
+    new Set(bookmarkCategories?.map((c) => c.category.id) || [])
   );
   const [pendingChanges, setPendingChanges] = useState<
     Array<{ categoryId: string; action: "add" | "remove" }>
@@ -84,7 +86,7 @@ export function ManageCategoriesDialog({
       // Optimistically update the bookmark cache
       queryClient.setQueryData(
         ["bookmarks", "get", { id: bookmark.id }],
-        (old: BookmarkPost | undefined) => {
+        (old: IBookmarkPost | undefined) => {
           if (!old) return old;
 
           const updatedCategories =

@@ -11,8 +11,6 @@ import { ManageCategoriesDialog } from "@/components/manage-categories-dialog";
 import { BookmarkStatusBadge } from "@/components/bookmark-status-badge";
 import { BookmarkSummary } from "@/components/bookmark-summary";
 import { DownloadedMediaPlayer } from "@/components/downloaded-media-player";
-import { RetryEnrichmentButton } from "@/components/retry-enrichment-button";
-import { EnrichmentErrorDetails } from "@/components/enrichment-error-details";
 import { useBookmarkStatus } from "@/hooks/use-bookmark-status";
 import { useState } from "react";
 import {
@@ -24,6 +22,7 @@ import {
   EyeIcon,
   CalendarIcon,
 } from "lucide-react";
+import { EnrichmentErrorDetails } from "@/components/enrichment-error-details";
 
 export const Route = createFileRoute("/bookmarks/$id")({
   component: BookmarkDetailPage,
@@ -33,7 +32,7 @@ function BookmarkDetailPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const { data: bookmark, isLoading, error } = useBookmark(id);
-
+  console.log('---bookmark', bookmark)
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [collectionsDialogOpen, setCollectionsDialogOpen] = useState(false);
@@ -137,7 +136,6 @@ function BookmarkDetailPage() {
         </div>
       </div>
 
-      {/* Main content */}
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between gap-4">
@@ -182,12 +180,12 @@ function BookmarkDetailPage() {
               {enrichmentDetails === "COMPLETED" && (
                 <BookmarkSummary
                   summary={bookmark.enrichment.summary}
-                  keywords={bookmark.enrichment.keywords}
-                  tags={bookmark.enrichment.tags}
+                  keywords={bookmark.enrichment.keywords as Array<string>}
+                  tags={bookmark.enrichment.tags as Array<string>}
                 />
               )}
 
-              {/* {(enrichmentDetails === "FAILED" ||
+              {(enrichmentDetails === "FAILED" ||
                 enrichmentDetails === "PARTIAL_SUCCESS") &&
                 enrichmentDetails && (
                   <EnrichmentErrorDetails
@@ -195,14 +193,14 @@ function BookmarkDetailPage() {
                     bookmarkId={bookmark.id}
                     processingStatus={enrichmentDetails}
                   />
-                )} */}
+                )}
 
               {enrichmentDetails === "PARTIAL_SUCCESS" &&
                 bookmark.enrichment.summary && (
                   <BookmarkSummary
                     summary={bookmark.enrichment.summary}
-                    keywords={bookmark.enrichment.keywords}
-                    tags={bookmark.enrichment.tags}
+                    keywords={bookmark.enrichment.keywords as Array<string>}
+                    tags={bookmark.enrichment.tags as Array<string>}
                   />
                 )}
             </div>
@@ -218,7 +216,7 @@ function BookmarkDetailPage() {
             </div>
           )}
 
-          {/* Media gallery */}
+
           {imageMedia.length > 0 && (
             <div className="space-y-2">
               <h3 className="text-sm font-medium">Images</h3>
@@ -306,30 +304,29 @@ function BookmarkDetailPage() {
             </div>
           )}
 
-          {/* Collections */}
+
           {bookmark.collections && bookmark.collections.length > 0 && (
             <div className="space-y-2">
               <h3 className="text-sm font-medium">Collections</h3>
               <div className="flex flex-wrap gap-2">
-                {bookmark.collections.map((collection) => (
-                  <Badge key={collection.id} variant="outline">
+                {bookmark.collections.map((item) => (
+                  <Badge key={item.collection.id} variant="outline">
                     <FolderIcon className="size-3 mr-1" />
-                    {collection.name}
+                    {item.collection.name}
                   </Badge>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Categories */}
           {bookmark.categories && bookmark.categories.length > 0 && (
             <div className="space-y-2">
               <h3 className="text-sm font-medium">Categories</h3>
               <div className="flex flex-wrap gap-2">
                 {bookmark.categories.map((category) => (
-                  <Badge key={category.id} variant="secondary">
+                  <Badge key={category.category.id} variant="secondary">
                     <TagIcon className="size-3 mr-1" />
-                    {category.name}
+                    {category.category.name}
                   </Badge>
                 ))}
               </div>

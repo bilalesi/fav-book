@@ -23,7 +23,7 @@ NC='\033[0m' # No Color
 # Get script directory and project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-RESTATE_DIR="${PROJECT_ROOT}/packages/restate"
+RESTATE_DIR="${PROJECT_ROOT}/apps/workflow"
 BUILD_DIR="${RESTATE_DIR}/dist"
 
 echo -e "${BLUE}========================================${NC}"
@@ -36,7 +36,7 @@ cd "${PROJECT_ROOT}"
 
 # Step 1: TypeScript type checking
 echo -e "${YELLOW}[1/5] Running TypeScript type checking...${NC}"
-if ! bun run --filter=@favy/restate check-types 2>&1; then
+if ! bun run --filter=@favy/workflow check-types 2>&1; then
     echo -e "${RED}✗ TypeScript type checking failed${NC}"
     exit 1
 fi
@@ -64,7 +64,7 @@ echo ""
 
 # Step 4: Build workflows and services
 echo -e "${YELLOW}[4/5] Building workflows and services...${NC}"
-if ! bun run --filter=@favy/restate build 2>&1; then
+if ! bun run --filter=@favy/workflow build 2>&1; then
     echo -e "${RED}✗ Build failed${NC}"
     exit 2
 fi

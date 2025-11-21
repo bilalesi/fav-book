@@ -1,11 +1,12 @@
-import { AIServiceError, AIErrorCode, type AIProvider } from "../types";
+import type { TAiProvider } from "@favy/shared";
+import { AIServiceError, AIErrorCode, } from "../types";
 
 /**
  * Determine if an error is retryable based on its characteristics.
  * @param error - The error to check
  * @returns true if the error should be retried
  */
-export function isRetryableError(error: unknown): boolean {
+export function is_retryable_error(error: unknown): boolean {
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
 
@@ -44,7 +45,7 @@ export function isRetryableError(error: unknown): boolean {
  * @param error - The error to map
  * @returns The appropriate AIErrorCode
  */
-export function mapErrorToCode(error: unknown): AIErrorCode {
+export function map_error_to_code(error: unknown): AIErrorCode {
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
 
@@ -103,15 +104,15 @@ export function mapErrorToCode(error: unknown): AIErrorCode {
  * @param provider - The AI provider that generated the error
  * @returns A properly formatted AIServiceError
  */
-export function createAIServiceError(
+export function create_ai_service_error(
   error: unknown,
   context: string,
-  provider?: AIProvider
+  provider?: TAiProvider
 ): AIServiceError {
   const message =
     error instanceof Error ? error.message : "Unknown error occurred";
-  const retryable = isRetryableError(error);
-  const code = mapErrorToCode(error);
+  const retryable = is_retryable_error(error);
+  const code = map_error_to_code(error);
 
   return new AIServiceError(
     `${context}: ${message}`,
@@ -126,7 +127,7 @@ export function createAIServiceError(
  * Providers can extend this with their own specific error mappings.
  */
 export abstract class BaseErrorMapper {
-  constructor(protected readonly provider: AIProvider) {}
+  constructor(protected readonly provider: TAiProvider) { }
 
   /**
    * Map a provider-specific error to an AIServiceError.
@@ -134,7 +135,7 @@ export abstract class BaseErrorMapper {
    * @param context - Context message
    * @returns AIServiceError with appropriate code and retry flag
    */
-  abstract mapError(error: unknown, context: string): AIServiceError;
+  abstract map_error(error: unknown, context: string): AIServiceError;
 
   /**
    * Common error mapping logic that can be used by all providers.
@@ -142,7 +143,7 @@ export abstract class BaseErrorMapper {
    * @param context - Context message
    * @returns AIServiceError
    */
-  protected mapCommonError(error: unknown, context: string): AIServiceError {
-    return createAIServiceError(error, context, this.provider);
+  protected map_common_error(error: unknown, context: string): AIServiceError {
+    return create_ai_service_error(error, context, this.provider);
   }
 }

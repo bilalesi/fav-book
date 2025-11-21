@@ -1,10 +1,10 @@
 import { z } from "zod";
-import type { SummaryOptions } from "../types";
+import type { ISummaryOptions } from "../types";
 
 /**
  * Create a dynamic summarization schema with allowed tag IDs
  */
-export function createSummarizationSchema(
+export function make_summarization_schema(
   allowedTags: Array<{ id: string; name: string }>
 ) {
   return z.object({
@@ -14,7 +14,7 @@ export function createSummarizationSchema(
     keywords: z
       .array(z.string())
       .min(3)
-      .max(10)
+      .max(6)
       .describe("Relevant keywords that capture the core topics"),
     tags: z
       .array(
@@ -27,11 +27,12 @@ export function createSummarizationSchema(
           )
         )
       )
+      .min(1)
+      .max(3)
       .describe("Category tags selected from the allowed list"),
   });
 }
 
-// Default schema for backward compatibility
 export const summarizationSchema = z.object({
   summary: z
     .string()
@@ -39,7 +40,7 @@ export const summarizationSchema = z.object({
   keywords: z
     .array(z.string())
     .min(3)
-    .max(10)
+    .max(6)
     .describe("Relevant keywords that capture the core topics"),
   tags: z
     .array(
@@ -49,7 +50,7 @@ export const summarizationSchema = z.object({
       })
     )
     .min(1)
-    .max(8)
+    .max(3)
     .describe("Semantic tags for categorization"),
 });
 
@@ -57,7 +58,7 @@ export const keywordSchema = z.object({
   keywords: z
     .array(z.string())
     .min(3)
-    .max(10)
+    .max(6)
     .describe("Relevant keywords from the content"),
 });
 
@@ -72,34 +73,35 @@ export const tagSchema = z.object({
         name: z.string(),
       })
     )
-    .min(2)
-    .max(8)
+    .min(1)
+    .max(3)
     .describe("Semantic tags for categorization"),
 });
 
 /**
  * Build a prompt for generating a summary with keywords and tags
  */
-export function buildSummarizationPrompt(
+export function build_summarization_prompt(
   input: string,
-  options?: SummaryOptions,
+  options?: ISummaryOptions,
   allowedTags?: Array<{ id: string; name: string }>
 ): string {
   const maxLength = options?.maxLength || 1000;
   const keywordCount = options?.keywordCount || 8;
   const tagCount = options?.tagCount || 3;
-
-  // Format allowed tags as a clear list
   const tagsList = allowedTags
     ? allowedTags
-        .map((tag) => `  - id: "${tag.id}", name: "${tag.name}"`)
-        .join("\n")
+      .map((tag) => `  - id: "${tag.id}", name: "${tag.name}"`)
+      .join("\n")
     : "No tags available";
 
   return `You are an expert information extractor.
 
 Task:
 Analyze the content from the following tweet or URL and provide:
+The analyze should be focus based on the type of the content.
+eg: if the content is technical, then the analyze should be focus on the technical aspect of the content.
+eg: if the content is political, then the analyze should be focus on the political aspect of the content.
 
 1. A highly informative summary (up to ${maxLength} words) including:
    - Main claim or message
@@ -132,10 +134,11 @@ Guidelines:
 - If the content lacks details or is incomplete, infer meaning from context
 - Do NOT add information not supported by the content`;
 }
+
 /**
  * Build a prompt for extracting keywords only
  */
-export function buildKeywordExtractionPrompt(
+export function build_keyword_extraction_prompt(
   content: string,
   count: number = 10
 ): string {
@@ -148,7 +151,7 @@ ${content}`;
 /**
  * Build a prompt for extracting tags only
  */
-export function buildTagExtractionPrompt(
+export function build_tag_extraction_prompt(
   content: string,
   count: number = 8
 ): string {

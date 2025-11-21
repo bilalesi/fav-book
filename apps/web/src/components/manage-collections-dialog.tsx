@@ -18,10 +18,10 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Loader from "@/components/loader";
-import type { BookmarkPost } from "@favy/shared";
+import type { IBookmarkPost } from "@favy/shared";
 
 interface ManageCollectionsDialogProps {
-  bookmark: BookmarkPost;
+  bookmark: IBookmarkPost;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -65,7 +65,6 @@ export function ManageCollectionsDialog({
 
   const handleSave = async () => {
     try {
-      // Execute all pending changes
       for (const change of pendingChanges) {
         if (change.action === "add") {
           await addToCollection.mutateAsync({
@@ -83,7 +82,7 @@ export function ManageCollectionsDialog({
       // Optimistically update the bookmark cache
       queryClient.setQueryData(
         ["bookmarks", "get", { id: bookmark.id }],
-        (old: BookmarkPost | undefined) => {
+        (old: IBookmarkPost | undefined) => {
           if (!old) return old;
 
           const updatedCollections =

@@ -11,7 +11,6 @@ RUN apk add --no-cache libc6-compat python3 make g++
 
 # Copy package files for dependency installation
 COPY package.json bun.lock* ./
-COPY packages/restate/package.json ./packages/restate/
 COPY packages/db/package.json ./packages/db/
 COPY packages/ai/package.json ./packages/ai/
 COPY packages/trigger/package.json ./packages/trigger/
@@ -36,7 +35,7 @@ COPY . .
 RUN cd packages/db && npm run db:generate
 
 # Build the Restate package
-RUN cd packages/restate && npm run build
+RUN cd apps/restate && npm run build
 
 # Stage 4: Production image
 FROM base AS runner
@@ -54,10 +53,8 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 restateuser
 
 # Copy built files and production dependencies
-COPY --from=builder --chown=restateuser:nodejs /app/packages/restate/dist ./dist
 COPY --from=builder --chown=restateuser:nodejs /app/packages ./packages
 COPY --from=deps --chown=restateuser:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=restateuser:nodejs /app/packages/restate/package.json ./package.json
 
 # Copy auto-registration script
 COPY --chown=restateuser:nodejs deployment/docker/register-restate-worker.sh ./register-restate-worker.sh

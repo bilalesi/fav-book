@@ -3,11 +3,8 @@ import { RPCLink } from "@orpc/client/fetch";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 import { QueryCache, QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { createRouterClient } from "@orpc/server";
 import type { RouterClient } from "@orpc/server";
-import { createIsomorphicFn } from "@tanstack/react-start";
-import { appRouter } from "@favy/api/routers/index";
-import { createContext } from "@favy/api/context";
+import type { TApiRouter } from "@favy/server";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,7 +39,7 @@ export const queryClient = new QueryClient({
         toast.error(message, {
           action: {
             label: "Dismiss",
-            onClick: () => {},
+            onClick: () => { },
           },
         });
       },
@@ -54,6 +51,7 @@ export const queryClient = new QueryClient({
       if (query.state.data === undefined) {
         const message = error?.message || "An error occurred";
         toast.error(message, {
+          position: "bottom-right",
           action: {
             label: "Retry",
             onClick: () => {
@@ -66,28 +64,16 @@ export const queryClient = new QueryClient({
   }),
 });
 
-const getORPCClient = createIsomorphicFn()
-  .server(() =>
-    createRouterClient(appRouter, {
-      context: async ({ req }) => {
-        return createContext({ context: req });
-      },
-    })
-  )
-  .client((): RouterClient<typeof appRouter> => {
-    const link = new RPCLink({
-      url: `${import.meta.env.VITE_SERVER_URL}/rpc`,
-      fetch(url, options) {
-        return fetch(url, {
-          ...options,
-          credentials: "include",
-        });
-      },
+const link = new RPCLink({
+  url: `${import.meta.env.VITE_SERVER_URL}/rpc`,
+  fetch(url, options) {
+    return fetch(url, {
+      ...options,
+      credentials: "include",
     });
+  },
+});
 
-    return createORPCClient(link);
-  });
-
-export const client: RouterClient<typeof appRouter> = getORPCClient();
+export const client: RouterClient<TApiRouter> = createORPCClient(link);
 
 export const orpc = createTanstackQueryUtils(client);

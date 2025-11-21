@@ -2,12 +2,12 @@
  * Shared workflow types used by both Trigger.dev and Restate implementations
  */
 
-import type { Platform } from "../types";
+import type { TPlatform } from "../types";
 
 /**
  * Workflow step enumeration
  */
-export const WorkflowStep = {
+export const TWorkflowStep = {
   CONTENT_RETRIEVAL: 'CONTENT_RETRIEVAL',
   SUMMARIZATION: 'SUMMARIZATION',
   MEDIA_DETECTION: 'MEDIA_DETECTION',
@@ -16,7 +16,7 @@ export const WorkflowStep = {
   DATABASE_UPDATE: 'DATABASE_UPDATE'
 } as const
 
-export type WorkflowStep = (typeof WorkflowStep)[keyof typeof WorkflowStep]
+export type TWorkflowStep = (typeof TWorkflowStep)[keyof typeof TWorkflowStep]
 
 /**
  * Error types for classification
@@ -34,25 +34,25 @@ export const ErrorType = {
   UNKNOWN: 'UNKNOWN'
 } as const
 
-export type ErrorType = (typeof ErrorType)[keyof typeof ErrorType]
+export type TErrorType = (typeof ErrorType)[keyof typeof ErrorType]
 
 
 /**
  * Input payload for bookmark enrichment workflow
  */
-export interface BookmarkEnrichmentInput {
+export interface IBookmarkEnrichmentInput {
   bookmarkId: string;
   userId: string;
-  platform: Platform;
+  platform: TPlatform;
   url: string;
   content: string;
-  enableMediaDownload: boolean;
+  enable_media_download: boolean;
 }
 
 /**
  * Media metadata returned from workflow
  */
-export interface MediaMetadata {
+export interface IMediaMetadata {
   type: "video" | "audio";
   originalUrl?: string;
   storagePath?: string;
@@ -69,7 +69,7 @@ export interface MediaMetadata {
 /**
  * Media detection result
  */
-export interface MediaDetectionResult {
+export interface IMediaDetectionResult {
   hasMedia: boolean;
   mediaType?: "video" | "audio";
   estimatedSize?: number;
@@ -80,17 +80,17 @@ export interface MediaDetectionResult {
 /**
  * Download result from media downloader
  */
-export interface DownloadResult {
+export interface IDownloadResult {
   success: boolean;
   filePath?: string;
-  metadata: MediaMetadata;
+  metadata: IMediaMetadata;
   error?: string;
 }
 
 /**
  * Upload result from storage service
  */
-export interface UploadResult {
+export interface IUploadResult {
   key: string;
   url: string;
   size: number;
@@ -100,7 +100,7 @@ export interface UploadResult {
 /**
  * Summary result from AI service
  */
-export interface SummaryResult {
+export interface ISummaryResult {
   summary: string;
   keywords: string[];
   tags: Array<{ id: string; name: string }>;
@@ -111,8 +111,8 @@ export interface SummaryResult {
  * Error information for workflow failures
  */
 export interface WorkflowError {
-  step: WorkflowStep;
-  errorType: ErrorType;
+  step: TWorkflowStep;
+  errorType: TErrorType;
   message: string;
   timestamp: Date;
   retryable: boolean;
@@ -123,12 +123,12 @@ export interface WorkflowError {
 /**
  * Output result from bookmark enrichment workflow
  */
-export interface BookmarkEnrichmentOutput {
+export interface IBookmarkEnrichmentOutput {
   success: boolean;
   summary?: string;
   keywords?: string[];
   tags?: Array<{ id: string; name: string }>;
-  mediaMetadata?: MediaMetadata[];
+  mediaMetadata?: IMediaMetadata[];
   errors?: WorkflowError[];
   tokensUsed?: number;
   executionTimeMs?: number;
@@ -137,22 +137,22 @@ export interface BookmarkEnrichmentOutput {
 /**
  * Internal workflow state for tracking execution
  */
-export interface WorkflowState {
+export interface IWorkflowState {
   bookmarkId: string;
   userId: string;
-  currentStep: WorkflowStep;
-  completedSteps: WorkflowStep[];
+  currentStep: TWorkflowStep;
+  completedSteps: TWorkflowStep[];
   errors: WorkflowError[];
   retryCount: number;
   startedAt: Date;
   updatedAt: Date;
-  partialResults: Partial<BookmarkEnrichmentOutput>;
+  partialResults: Partial<IBookmarkEnrichmentOutput>;
 }
 
 /**
  * Configuration for workflow retry behavior
  */
-export interface RetryConfig {
+export interface IRetryConfig {
   maxAttempts: number;
   factor: number;
   minTimeoutInMs: number;
@@ -163,6 +163,6 @@ export interface RetryConfig {
 /**
  * Workflow invocation handle
  */
-export interface WorkflowHandle {
+export interface IWorkflowHandle {
   id: string;
 }

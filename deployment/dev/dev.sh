@@ -187,7 +187,7 @@ if [ "$START_SERVICES" = true ]; then
     
     # Start Restate worker
     echo -e "${BLUE}  → Starting Restate worker (port 9080)...${NC}"
-    dotenvx run --env-file=deployment/dev/.env.server -- bun run --cwd packages/restate dev &
+    dotenvx run --env-file=deployment/dev/.env.server -- bun run --cwd apps/workflow dev &
     RESTATE_PID=$!
     
     # Wait for Restate worker to be ready
@@ -215,7 +215,7 @@ if [ "$START_SERVICES" = true ]; then
         echo -e "${BOLD}${BLUE}[4/4] Setting up Restate...${NC}"
     fi
     echo -e "${BLUE}  → Registering Restate worker...${NC}"
-    cd "$PROJECT_ROOT/packages/restate"
+    cd "$PROJECT_ROOT/apps/workflow"
     if ./register-worker.sh; then
         echo -e "${GREEN}✓ Restate worker registered${NC}"
     else
@@ -226,7 +226,7 @@ if [ "$START_SERVICES" = true ]; then
     
     # Start API server
     echo -e "${BLUE}  → Starting API server (port 3000)...${NC}"
-    dotenvx run --env-file=deployment/dev/.env.server -- bun run --cwd apps/server dev &
+    dotenvx run --env-file=deployment/dev/.env.server -- bun run --cwd apps/server dev:hot &
     SERVER_PID=$!
     sleep 2
     

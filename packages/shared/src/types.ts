@@ -1,5 +1,10 @@
-// Enums
-// Define the dictionaries
+
+export const DictAiProvider = {
+  OLLAMA: "ollama",
+  LMSTUDIO: "lmstudio",
+} as const;
+export type TAiProvider = (typeof DictAiProvider)[keyof typeof DictAiProvider];
+
 export const DictPlatform = {
   TWITTER: "TWITTER",
   LINKEDIN: "LINKEDIN",
@@ -28,17 +33,17 @@ export const DictDownloadStatus = {
 } as const;
 
 // Derive types from the dictionaries
-export type Platform = (typeof DictPlatform)[keyof typeof DictPlatform];
-export type MediaType = (typeof DictMediaType)[keyof typeof DictMediaType];
-export type ProcessingStatus =
+export type TPlatform = (typeof DictPlatform)[keyof typeof DictPlatform];
+export type TMediaType = (typeof DictMediaType)[keyof typeof DictMediaType];
+export type TProcessingStatus =
   (typeof DictProcessingStatus)[keyof typeof DictProcessingStatus];
-export type DownloadStatus =
+export type TDownloadStatus =
   (typeof DictDownloadStatus)[keyof typeof DictDownloadStatus];
 // Core entities
-export interface BookmarkPost {
+export interface IBookmarkPost {
   id: string;
   userId: string;
-  platform: Platform;
+  platform: TPlatform;
   postId: string;
   postUrl: string;
   content: string;
@@ -49,20 +54,20 @@ export interface BookmarkPost {
   createdAt: Date;
   viewCount: number;
   metadata?: Record<string, any>;
-  media?: Media[];
-  collections?: Collection[];
-  categories?: Category[];
-  enrichment?: BookmarkEnrichment | null;
-  downloadedMedia?: DownloadedMedia[];
+  media?: IMedia[];
+  collections?: ICollection[];
+  categories?: ICategory[];
+  enrichment?: IBookmarkEnrichment | null;
+  downloadedMedia?: IDownloadedMedia[];
 }
 
-export interface BookmarkEnrichment {
+export interface IBookmarkEnrichment {
   id: string;
   bookmarkPostId: string;
   summary?: string;
   keywords?: string[];
   tags?: string[];
-  processingStatus: ProcessingStatus;
+  processingStatus: TProcessingStatus;
   workflowId?: string;
   errorMessage?: string;
   enrichedAt?: Date;
@@ -70,10 +75,10 @@ export interface BookmarkEnrichment {
   updatedAt: Date;
 }
 
-export interface DownloadedMedia {
+export interface IDownloadedMedia {
   id: string;
   bookmarkPostId: string;
-  type: MediaType;
+  type: TMediaType;
   originalUrl: string;
   storagePath: string;
   storageUrl?: string;
@@ -83,33 +88,33 @@ export interface DownloadedMedia {
   format?: string;
   width?: number;
   height?: number;
-  downloadStatus: DownloadStatus;
+  downloadStatus: TDownloadStatus;
   errorMessage?: string;
   downloadedAt?: Date;
   createdAt: Date;
   metadata?: Record<string, any>;
 }
 
-export interface Media {
+export interface IMedia {
   id: string;
   bookmarkPostId: string;
-  type: MediaType;
+  type: TMediaType;
   url: string;
   thumbnailUrl?: string;
   metadata?: Record<string, any>;
 }
 
-export interface Collection {
+export interface ICollection {
   id: string;
   userId: string;
   name: string;
   description?: string;
   createdAt: Date;
   updatedAt: Date;
-  bookmarks?: BookmarkPost[];
+  bookmarks?: IBookmarkPost[];
 }
 
-export interface Category {
+export interface ICategory {
   id: string;
   name: string;
   userId?: string;
@@ -118,15 +123,15 @@ export interface Category {
 }
 
 // Filter and search types
-export interface BookmarkFilters {
-  platform?: Platform;
+export interface IBookmarkFilters {
+  platform?: TPlatform;
   dateFrom?: Date;
   dateTo?: Date;
   authorUsername?: string;
   categoryIds?: string[];
   collectionId?: string;
   // New fields for enhanced filtering
-  platforms?: Platform[]; // Multiple platform filter
+  platforms?: TPlatform[]; // Multiple platform filter
   authorUsernameContains?: string; // Partial match on author
   createdAtFrom?: Date; // Filter by post creation date
   createdAtTo?: Date;
@@ -134,19 +139,19 @@ export interface BookmarkFilters {
   contentSearch?: string; // Full-text search in content
 }
 
-export interface SearchFilters extends BookmarkFilters {
+export interface ISearchFilters extends IBookmarkFilters {
   query: string;
   sortBy?: "relevance" | "date" | "views";
 }
 
-export interface Pagination {
+export interface IPagination {
   cursor?: string;
   limit?: number;
 }
 
-// API input types
-export interface CreateBookmarkInput {
-  platform: Platform;
+
+export interface ICreateBookmarkInput {
+  platform: TPlatform;
   postId: string;
   postUrl: string;
   content: string;
@@ -155,46 +160,46 @@ export interface CreateBookmarkInput {
   authorProfileUrl: string;
   createdAt: Date;
   metadata?: Record<string, any>;
-  media?: CreateMediaInput[];
+  media?: ICreateMediaInput[];
 }
 
-export interface CreateMediaInput {
-  type: MediaType;
+export interface ICreateMediaInput {
+  type: TMediaType;
   url: string;
   thumbnailUrl?: string;
   metadata?: Record<string, any>;
 }
 
-export interface UpdateBookmarkInput {
+export interface IUpdateBookmarkInput {
   content?: string;
   metadata?: Record<string, any>;
   collectionIds?: string[];
 }
 
-export interface CreateCollectionInput {
+export interface ICreateCollectionInput {
   name: string;
   description?: string;
 }
 
-export interface UpdateCollectionInput {
+export interface IUpdateCollectionInput {
   name?: string;
   description?: string;
 }
 
-// API output types
-export interface BookmarkListResponse {
-  bookmarks: BookmarkPost[];
+
+export interface IBookmarkListResponse {
+  bookmarks: IBookmarkPost[];
   nextCursor?: string;
   total: number;
 }
 
-export interface SearchResponse {
-  results: BookmarkPost[];
+export interface ISearchResponse {
+  results: IBookmarkPost[];
   nextCursor?: string;
   total: number;
 }
 
-export interface BulkImportResponse {
+export interface IBulkImportResponse {
   successCount: number;
   failureCount: number;
   errors?: Array<{
@@ -204,23 +209,23 @@ export interface BulkImportResponse {
 }
 
 // Dashboard types
-export interface DashboardStats {
+export interface IDashboardStats {
   totalBookmarks: number;
   bookmarksByPlatform: {
     twitter: number;
     linkedin: number;
     genericUrl: number;
   };
-  recentBookmarks: BookmarkPost[];
-  mostViewed: BookmarkPost[];
+  recentBookmarks: IBookmarkPost[];
+  mostViewed: IBookmarkPost[];
   topicBreakdown: Array<{
     categoryName: string;
     count: number;
   }>;
 }
 
-// Bulk import data format
-export interface BookmarkImportData {
+
+export interface IBookmarkImportData {
   postId: string;
   postUrl: string;
   content: string;
@@ -230,7 +235,7 @@ export interface BookmarkImportData {
     profileUrl: string;
   };
   media?: Array<{
-    type: MediaType;
+    type: TMediaType;
     url: string;
     thumbnailUrl?: string;
   }>;
@@ -238,7 +243,9 @@ export interface BookmarkImportData {
   metadata?: Record<string, any>;
 }
 
-export interface BulkImportInput {
-  platform: Platform;
-  bookmarks: BookmarkImportData[];
+export interface IBulkImportInput {
+  platform: TPlatform;
+  bookmarks: IBookmarkImportData[];
 }
+
+

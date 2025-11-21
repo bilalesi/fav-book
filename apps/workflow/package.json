@@ -1,0 +1,35 @@
+{
+    "name": "@favy/workflow",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "type": "module",
+    "scripts": {
+        "build": "bun build ./src/index.ts --outdir dist --minify --target=bun",
+        "dev": "bun run src/server.ts",
+        "dev:hot": "bun run --hot src/server.ts",
+        "start": "node dist/server.js",
+        "register": "./register-worker.sh",
+        "format": "biome check --write ."
+    },
+    "devDependencies": {
+        "tsdown": "catalog:",
+        "@biomejs/biome": "^2.3.7"
+    },
+    "peerDependencies": {
+        "typescript": "^5"
+    },
+    "dependencies": {
+        "@favy/ai": "workspace:*",
+        "@favy/db": "workspace:*",
+        "@favy/media-downloader": "workspace:*",
+        "@favy/shared": "workspace:*",
+        "@favy/storage": "workspace:*",
+        "@restatedev/restate-sdk": "^1.3.3",
+        "@restatedev/restate-sdk-clients": "^1.3.3",
+        "build": "^0.1.4",
+        "dotenv": "catalog:",
+        "neverthrow": "^8.2.0",
+        "ts-pattern": "catalog:",
+        "zod": "^4.1.12"
+    }
+}

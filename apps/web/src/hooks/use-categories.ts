@@ -5,7 +5,11 @@ import { useMutation, useQuery } from "@tanstack/react-query";
  * Hook to fetch all categories
  */
 export function useCategoriesList() {
-  return useQuery(orpc.categories.list.queryOptions());
+  return useQuery(orpc.categories.list.queryOptions({}));
+}
+
+export function useBookmarkCategoriesList(bookmarkId: string) {
+  return useQuery(orpc.categories.retrieve_bookmark_categories.queryOptions({ input: { id: bookmarkId } }));
 }
 
 /**
@@ -28,7 +32,7 @@ export function useAssignCategoryToBookmark() {
     }: {
       categoryId: string;
       bookmarkId: string;
-    }) => client.categories.assignToBookmark({ categoryId, bookmarkId }),
+    }) => client.categories.assign_bookmark({ categoryId, bookmarkId }),
   });
 }
 
@@ -43,6 +47,6 @@ export function useRemoveCategoryFromBookmark() {
     }: {
       categoryId: string;
       bookmarkId: string;
-    }) => client.categories.removeFromBookmark({ categoryId, bookmarkId }),
+    }) => client.categories.remove_from_bookmark({ categoryId, bookmarkId }),
   });
 }
