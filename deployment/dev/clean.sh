@@ -96,6 +96,7 @@ if [ "$FORCE" = false ]; then
     echo "  • Remove all containers"
     echo "  • Delete all database data"
     echo "  • Delete all Restate state"
+    echo "  • Delete all Caddy data and configuration"
     echo ""
     log_error "This action cannot be undone!"
     echo ""
@@ -127,7 +128,10 @@ log_success "Containers removed"
 log_info "Removing volumes..."
 docker volume rm bookmarks-dev-postgres-data 2>/dev/null || true
 docker volume rm bookmarks-dev-restate-data 2>/dev/null || true
+docker volume rm bookmarks-dev-caddy-data 2>/dev/null || true
+docker volume rm bookmarks-dev-caddy-config 2>/dev/null || true
 log_success "Volumes removed"
+log_success "Caddy volumes cleaned"
 
 log_info "Removing network..."
 docker network rm bookmarks-dev-network 2>/dev/null || true

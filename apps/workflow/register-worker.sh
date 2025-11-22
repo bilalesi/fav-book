@@ -50,7 +50,8 @@ if ! curl -s -f "$RESTATE_ADMIN_URL/health" > /dev/null 2>&1; then
 fi
 
 # Check if worker is reachable (optional check, don't fail if not)
-if curl -s -f "http://localhost:9080" > /dev/null 2>&1; then
+echo -e "${GREEN} Worker url: $WORKER_URL ${NC}"
+if curl -s -f $WORKER_URL > /dev/null 2>&1; then
     echo -e "${GREEN}✓ Worker is reachable${NC}"
 else
     echo -e "${YELLOW}⚠ Worker may not be running yet at localhost:9080${NC}"

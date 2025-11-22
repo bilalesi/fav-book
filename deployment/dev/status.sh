@@ -109,6 +109,23 @@ test_restate() {
     curl -sf http://localhost:9070/health >/dev/null 2>&1
 }
 
+# Test Caddy connection
+test_caddy() {
+    curl -sf http://localhost:2019/config/ >/dev/null 2>&1
+}
+
+# Test proxy URL accessibility
+test_proxy_url() {
+    local url=$1
+    curl -sf --max-time 2 "$url" >/dev/null 2>&1
+}
+
+# Check if backend service is reachable
+check_backend_service() {
+    local port=$1
+    curl -sf --max-time 2 "http://localhost:$port" >/dev/null 2>&1
+}
+
 # =============================================================================
 # Parse Arguments
 # =============================================================================
@@ -153,6 +170,7 @@ if [ "$JSON_OUTPUT" = true ]; then
     # JSON output for programmatic use
     postgres_status=$(get_service_status "postgres")
     restate_status=$(get_service_status "restate")
+    caddy_status=$(get_service_status "caddy")
     
     cat <<EOF
 {
@@ -168,6 +186,13 @@ if [ "$JSON_OUTPUT" = true ]; then
       "container": "bookmarks-dev-restate",
       "ingress_port": 8080,
       "admin_port": 9070
+    },
+    "caddy": {
+      "status": "$caddy_status",
+      "container": "bookmarks-dev-caddy",
+      "http_port": 80,
+      "https_port": 443,
+      "admin_port": 2019
     }
   }
 }
@@ -189,6 +214,7 @@ echo ""
 
 display_service_status "postgres" "PostgreSQL"
 display_service_status "restate" "Restate Server"
+display_service_status "caddy" "Caddy Proxy"
 
 echo ""
 
@@ -217,13 +243,92 @@ else
     echo -e "${RED}✗ Failed${NC}"
 fi
 
+# Caddy health check
+printf "  %-20s " "Caddy Admin API:"
+if is_service_running "caddy" && test_caddy; then
+    echo -e "${GREEN}✓ OK${NC}"
+else
+    echo -e "${RED}✗ Failed${NC}"
+fi
+
 echo ""
+
+# =============================================================================
+# Proxy URL Accessibility Tests
+# =============================================================================
+
+if is_service_running "caddy"; then
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  PROXY URL TESTS"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    
+    # Check if DNS is configured
+    if ping -c 1 -W 1 favy >/dev/null 2>&1; then
+        # Test proxy URLs
+        printf "  %-20s " "http://favy:"
+        if test_proxy_url "http://favy"; then
+            echo -e "${GREEN}✓ Accessible${NC}"
+        else
+            echo -e "${YELLOW}⚠ Unreachable${NC} (backend may be down)"
+        fi
+        
+        printf "  %-20s " "http://server.favy:"
+        if test_proxy_url "http://server.favy"; then
+            echo -e "${GREEN}✓ Accessible${NC}"
+        else
+            echo -e "${YELLOW}⚠ Unreachable${NC} (backend may be down)"
+        fi
+        
+        printf "  %-20s " "http://restate.favy:"
+        if test_proxy_url "http://restate.favy"; then
+            echo -e "${GREEN}✓ Accessible${NC}"
+        else
+            echo -e "${YELLOW}⚠ Unreachable${NC} (backend may be down)"
+        fi
+    else
+        echo -e "  ${YELLOW}⚠${NC} DNS not configured for .favy domains"
+        echo "    Configure DNS to test proxy URLs"
+        echo "    See: deployment/dev/DNS_SETUP.md"
+    fi
+    
+    echo ""
+    
+    # Backend service status
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  BACKEND SERVICE STATUS"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    
+    printf "  %-20s " "Web App (3001):"
+    if check_backend_service 3001; then
+        echo -e "${GREEN}✓ Reachable${NC}"
+    else
+        echo -e "${RED}✗ Unreachable${NC}"
+    fi
+    
+    printf "  %-20s " "API Server (3000):"
+    if check_backend_service 3000; then
+        echo -e "${GREEN}✓ Reachable${NC}"
+    else
+        echo -e "${RED}✗ Unreachable${NC}"
+    fi
+    
+    printf "  %-20s " "Restate Admin (9070):"
+    if check_backend_service 9070; then
+        echo -e "${GREEN}✓ Reachable${NC}"
+    else
+        echo -e "${RED}✗ Unreachable${NC}"
+    fi
+    
+    echo ""
+fi
 
 # =============================================================================
 # Connection Information
 # =============================================================================
 
-if is_service_running "postgres" || is_service_running "restate"; then
+if is_service_running "postgres" || is_service_running "restate" || is_service_running "caddy"; then
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "  CONNECTION INFORMATION"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -239,6 +344,21 @@ if is_service_running "postgres" || is_service_running "restate"; then
         echo "  🔄 Restate Server"
         echo "     Ingress: http://localhost:8080"
         echo "     Admin:   http://localhost:9070"
+        echo ""
+    fi
+    
+    if is_service_running "caddy"; then
+        echo "  🌐 Caddy Proxy"
+        echo "     Admin API: http://localhost:2019"
+        if ping -c 1 -W 1 favy >/dev/null 2>&1; then
+            echo "     Proxy URLs:"
+            echo "       Web:     http://favy or http://web.favy"
+            echo "       API:     http://server.favy"
+            echo "       Restate: http://restate.favy"
+        else
+            echo "     Status: Running (DNS not configured)"
+            echo "     See: deployment/dev/DNS_SETUP.md"
+        fi
         echo ""
     fi
 fi
@@ -279,10 +399,11 @@ echo "  AVAILABLE ACTIONS"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-if ! is_service_running "postgres" && ! is_service_running "restate"; then
+if ! is_service_running "postgres" && ! is_service_running "restate" && ! is_service_running "caddy"; then
     echo "  Start services:       ./start.sh"
 else
     echo "  View logs:            docker-compose logs -f [service]"
+    echo "  View Caddy logs:      docker-compose logs -f caddy"
     echo "  Stop services:        ./stop.sh"
     echo "  Clean environment:    ./clean.sh"
     echo "  Restart services:     ./stop.sh && ./start.sh"

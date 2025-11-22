@@ -1,24 +1,29 @@
-import { defineConfig, type BuildEnvironmentOptions, } from "vite";
-import { tanstackStart } from '@tanstack/react-start/plugin/vite';
-import { devtools } from '@tanstack/devtools-vite';
-import { nitro } from 'nitro/vite';
+import { defineConfig, type BuildEnvironmentOptions } from "vite";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import { devtools } from "@tanstack/devtools-vite";
+import { nitro } from "nitro/vite";
 import tailwindcss from "@tailwindcss/vite";
-import viteReact from '@vitejs/plugin-react';
-import viteTsConfigPaths from 'vite-tsconfig-paths';
+import viteReact from "@vitejs/plugin-react";
+import viteTsConfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig(() => {
   return {
+    server: {
+      // Listen on all interfaces so Docker containers can access it
+      host: "0.0.0.0",
+      port: 3001,
+    },
     plugins: [
       devtools(),
       nitro(),
       viteTsConfigPaths({
-        projects: ['./tsconfig.json'],
+        projects: ["./tsconfig.json"],
       }),
       tailwindcss(),
       tanstackStart(),
       viteReact({
         babel: {
-          plugins: ['babel-plugin-react-compiler'],
+          plugins: ["babel-plugin-react-compiler"],
         },
       }),
     ],

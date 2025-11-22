@@ -204,6 +204,14 @@ if ! wait_for_service "restate" 30; then
     exit 1
 fi
 
+# Wait for Caddy
+if ! wait_for_service "caddy" 30; then
+    log_error "Caddy failed to start"
+    log_info "Showing Caddy logs:"
+    docker-compose logs caddy
+    exit 1
+fi
+
 # =============================================================================
 # Run Database Migrations
 # =============================================================================
@@ -216,23 +224,27 @@ log_info "Checking for database migrations..."
 if [ -d "$PROJECT_ROOT/packages/db" ]; then
     cd "$PROJECT_ROOT/packages/db"
     
-    # Check if migrations exist
-    if [ -d "prisma/schema" ]; then
-        log_info "Running Prisma migrations..."
-        
-        # Set DATABASE_URL for migrations
-        export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/bookmarks_dev"
-        
-        # Run migrations using bun (or npm/yarn if bun not available)
-        if command_exists bun; then
-            bun run prisma migrate deploy
-        elif command_exists npm; then
-            npm run db:push
+    # Set DATABASE_URL for migrations
+    export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/bookmarks_dev"
+    
+    # Generate Prisma client
+    log_info "Generating Prisma client..."
+    if command_exists bun; then
+        bun run db:generate
+        if [ $? -eq 0 ]; then
+            log_success "Prisma client generated"
         else
-            log_warning "Neither bun nor npm found. Please run migrations manually:"
-            log_warning "  cd packages/db && bun run prisma migrate deploy"
+            log_warning "Prisma client generation failed"
         fi
-        
+    else
+        log_warning "Bun not found. Please generate Prisma client manually:"
+        log_warning "  cd packages/db && bun run db:generate"
+    fi
+    
+    # Run migrations
+    log_info "Running Prisma migrations..."
+    if command_exists bun; then
+        bun run db:migrate
         if [ $? -eq 0 ]; then
             log_success "Database migrations completed"
         else
@@ -240,11 +252,88 @@ if [ -d "$PROJECT_ROOT/packages/db" ]; then
             log_info "You may need to run migrations manually"
         fi
     else
-        log_info "No migrations found, skipping"
+        log_warning "Bun not found. Please run migrations manually:"
+        log_warning "  cd packages/db && bun run db:migrate"
+    fi
+    
+    # Seed database
+    log_info "Seeding database..."
+    if command_exists bun; then
+        bun run db:seed
+        if [ $? -eq 0 ]; then
+            log_success "Database seeded"
+        else
+            log_warning "Database seeding failed or not needed"
+        fi
+    else
+        log_warning "Bun not found. Please seed database manually:"
+        log_warning "  cd packages/db && bun run db:seed"
     fi
 else
     log_warning "Database package not found, skipping migrations"
 fi
+
+cd "$PROJECT_ROOT"
+
+# =============================================================================
+# Register Restate Worker
+# =============================================================================
+
+print_header "Registering Restate Worker"
+
+# Check if dotenvx is available
+if ! command_exists dotenvx; then
+    log_warning "dotenvx not found. Installing to ~/.local/bin..."
+    mkdir -p ~/.local/bin
+    curl -sfS "https://dotenvx.sh?directory=$HOME/.local/bin" | sh
+    export PATH="$HOME/.local/bin:$PATH"
+    log_success "dotenvx installed"
+fi
+
+cd "$PROJECT_ROOT"
+
+# Start Restate worker
+log_info "Starting Restate worker (port 9080)..."
+dotenvx run --env-file=deployment/dev/.env.server -- bun run --cwd apps/workflow dev > /dev/null 2>&1 &
+WORKER_PID=$!
+
+# Wait for Restate worker to be ready
+log_info "Waiting for worker to be ready... $WORKER_PID"
+MAX_WAIT=30
+WAITED=0
+while [ $WAITED -lt $MAX_WAIT ]; do
+    if curl -s -f http://localhost:9080 > /dev/null 2>&1; then
+        log_success "Worker is ready"
+        break
+    fi
+    sleep 1
+    WAITED=$((WAITED + 1))
+done
+
+if [ $WAITED -ge $MAX_WAIT ]; then
+    log_warning "Worker took too long to start, continuing anyway"
+fi
+
+# Give it an extra moment to fully initialize
+sleep 2
+
+# Register Restate worker with Restate server
+log_info "Registering Restate worker..."
+cd "$PROJECT_ROOT/apps/workflow"
+if ./register-worker.sh; then
+    log_success "Restate worker registered"
+else
+    log_warning "Worker registration failed (will retry later)"
+fi
+cd "$PROJECT_ROOT"
+
+# Stop the temporary worker
+log_info "Stopping temporary worker..."
+kill $WORKER_PID 2>/dev/null || true
+wait $WORKER_PID 2>/dev/null || true
+log_success "Temporary worker stopped"
+
+cd "$PROJECT_ROOT"
 
 # =============================================================================
 # Display Connection Information
@@ -255,6 +344,7 @@ print_header "Development Environment Ready"
 echo ""
 log_success "Infrastructure services are running!"
 echo ""
+
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  SERVICE INFORMATION"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -272,23 +362,36 @@ echo "     Ingress:  http://localhost:8080"
 echo "     Admin:    http://localhost:9070"
 echo "     Status:   http://localhost:9070/health"
 echo ""
+echo "  🌐 Caddy Proxy (✨ .localhost domains work automatically!)"
+echo "     Status:   http://localhost:2019"
+echo "     HTTP:     Port 80"
+echo "     HTTPS:    Port 443"
+echo ""
+echo "     Proxy URLs (no DNS setup needed!):"
+echo "       Web App:  http://favy.localhost or http://web.favy.localhost"
+echo "       API:      http://server.favy.localhost"
+echo "       Restate:  http://restate.favy.localhost"
+echo ""
+echo "     💡 .localhost domains automatically resolve to 127.0.0.1"
+echo "        in all modern browsers (Chrome, Firefox, Safari, Edge)"
+echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  NEXT STEPS"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "  1. Start the API server (in a new terminal):"
-echo "     cd apps/server && bun run dev"
+echo "     dotenvx run --env-file=deployment/dev/.env.server -- bun run --cwd apps/server dev"
 echo ""
 echo "  2. Start the web application (in another terminal):"
-echo "     cd apps/web && bun run dev"
+echo "     dotenvx run --env-file=deployment/dev/.env.web -- bun run --cwd apps/web dev"
 echo ""
 echo "  3. Start the Restate worker (in another terminal):"
-echo "     cd apps/workflow && bun run dev"
+echo "     dotenvx run --env-file=deployment/dev/.env.server -- bun run --cwd apps/workflow dev"
 echo ""
 echo "  4. Access the application:"
-echo "     Web:    http://localhost:3001"
-echo "     API:    http://localhost:3000"
-echo "     Restate: http://localhost:9070"
+echo "     Web:     http://favy.localhost (or http://localhost:3001)"
+echo "     API:     http://server.favy.localhost (or http://localhost:3000)"
+echo "     Restate: http://restate.favy.localhost (or http://localhost:9070)"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  USEFUL COMMANDS"

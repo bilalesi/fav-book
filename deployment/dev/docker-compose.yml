@@ -26,7 +26,7 @@ services:
       - postgres-data:/var/lib/postgresql
 
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d bookmarks_dev" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d bookmarks_dev"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -56,7 +56,7 @@ services:
       - "host.docker.internal:host-gateway"
 
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:9070/health" ]
+      test: ["CMD", "curl", "-f", "http://localhost:9070/health"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -83,7 +83,15 @@ services:
     networks:
       - bookmarks-dev
     healthcheck:
-      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9000/api/serverInfo" ]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:9000/api/serverInfo",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -109,7 +117,7 @@ services:
       valkey-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
 
     healthcheck:
-      test: [ "CMD", "valkey-cli", "ping" ]
+      test: ["CMD", "valkey-cli", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -124,51 +132,35 @@ services:
       dockerfile: Dockerfile
     container_name: bookmarks-dev-twitor
     restart: unless-stopped
-
+    env_file:
+      - .env.server
     environment:
-      # Twitter API Credentials
-      TWITTER_USERNAME: ${TWITTER_USERNAME}
-      TWITTER_PASSWORD: ${TWITTER_PASSWORD}
-      TWITTER_EMAIL: ${TWITTER_EMAIL}
-
-      # Database connection
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/bookmarks_dev
-
-      # API Configuration (host.docker.internal allows container to reach host)
+      TWITTER_USERNAME: ${TWITTER_USERNAME:-}
+      TWITTER_PASSWORD: ${TWITTER_PASSWORD:-}
+      TWITTER_EMAIL: ${TWITTER_EMAIL:-}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/bookmarks_dev}
       API_BASE_URL: http://host.docker.internal:3000
-      API_AUTH_TOKEN: ${API_AUTH_TOKEN}
-
-      # Service Configuration
+      API_AUTH_TOKEN: ${API_AUTH_TOKEN:-}
       TWITOR_PORT: 8001
       TWITOR_HOST: 0.0.0.0
       MAX_CONCURRENT_CRAWLS: 5
       BATCH_SIZE: 100
-
-      # Output Configuration
       OUTPUT_DIR: /tmp/twitor_exports
-
-      # Restate Configuration
-      RESTATE_INGRESS_URL: http://restate:8080
-      RESTATE_ADMIN_URL: http://restate:9070
-
-      # Valkey/Redis Configuration
+      RESTATE_INGRESS_URL: ${RESTATE_RUNTIME_ENDPOINT:-http://restate:8080}
+      RESTATE_ADMIN_URL: ${RESTATE_ADMIN_ENDPOINT:-http://restate:9070}
       VALKEY_URL: redis://valkey:6379/0
       VALKEY_MAX_CONNECTIONS: 10
-
-      # Logging
       LOG_LEVEL: INFO
       DEBUG: false
 
     ports:
       - "8001:8001"
-      # Note: Port 9080 removed - local Restate worker uses this port
 
-      # Allow container to reach host machine
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8001/health" ]
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -191,6 +183,47 @@ services:
     command: --cleanup --scope cobalt --interval 900 --include-restarting
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: bookmarks-dev-caddy
+    restart: unless-stopped
+
+    ports:
+      - "80:80"
+      - "443:443"
+      - "2019:2019" # Admin API for debugging
+
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+    # Allow container to reach host machine
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:2019/config/",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+    networks:
+      - bookmarks-dev
+
+    # Caddy can start independently
+    depends_on: []
+
 volumes:
   postgres-data:
     name: bookmarks-dev-postgres-data
@@ -206,6 +239,14 @@ volumes:
 
   cobalt-data:
     name: bookmarks-dev-cobalt-data
+    driver: local
+
+  caddy-data:
+    name: bookmarks-dev-caddy-data
+    driver: local
+
+  caddy-config:
+    name: bookmarks-dev-caddy-config
     driver: local
 
 networks:

@@ -1,0 +1,90 @@
+# Caddy Configuration for Development Environment
+# This file configures Caddy as a reverse proxy for local development,
+# providing clean subdomain-based URLs instead of port numbers.
+#
+# Using .localhost domains - these automatically resolve to 127.0.0.1 in all
+# modern browsers (Chrome, Firefox, Safari, Edge) without any DNS configuration!
+
+# =============================================================================
+# Global Options
+# =============================================================================
+{
+	# Disable automatic HTTPS for development to avoid certificate warnings
+	# with local domains. Enable this if you need to test HTTPS-specific features.
+	auto_https off
+	
+	# Enable admin API for debugging and health checks
+	# Bind to 0.0.0.0 so healthcheck can access it from within container
+	# Access at http://localhost:2019 from host machine
+	admin 0.0.0.0:2019
+}
+
+# =============================================================================
+# Web Application - Primary Domain
+# =============================================================================
+# Route: http://favy.localhost → localhost:3001
+# This is the main frontend application accessible via the short domain.
+# No DNS configuration needed - .localhost domains work automatically!
+http://favy.localhost {
+	# Proxy all requests to the web application running on port 3001
+	# host.docker.internal allows the Docker container to reach the host machine
+	reverse_proxy host.docker.internal:3001
+	
+	# Custom error handling when the web application is not running
+	handle_errors {
+		respond "Web application is not running. Start it with: cd apps/web && bun run dev" 503
+	}
+}
+
+# =============================================================================
+# Web Application - Subdomain Alias
+# =============================================================================
+# Route: http://web.favy.localhost → localhost:3001
+# Alternative subdomain for accessing the web application.
+http://web.favy.localhost {
+	# Proxy all requests to the web application running on port 3001
+	reverse_proxy host.docker.internal:3001
+	
+	# Custom error handling when the web application is not running
+	handle_errors {
+		respond "Web application is not running. Start it with: cd apps/web && bun run dev" 503
+	}
+}
+
+# =============================================================================
+# API Server
+# =============================================================================
+# Route: http://server.favy.localhost → localhost:3000
+# Backend API server for handling all API requests.
+http://server.favy.localhost {
+	# Proxy all requests to the API server running on port 3000
+	reverse_proxy host.docker.internal:3000
+	
+	# Custom error handling when the API server is not running
+	handle_errors {
+		respond "API server is not running. Start it with: cd apps/server && bun run dev" 503
+	}
+}
+
+# =============================================================================
+# Restate Server - Admin UI and Ingress
+# =============================================================================
+# Route: http://restate.favy.localhost → localhost:9070 (admin UI)
+# Route: http://restate.favy.localhost/ingress/* → localhost:8080 (ingress API)
+# Restate workflow orchestration platform with path-based routing.
+http://restate.favy.localhost {
+	# Special handling for /ingress/* paths - route to Restate ingress port
+	# The ingress endpoint is where workflows are invoked
+	handle /ingress/* {
+		reverse_proxy host.docker.internal:8080
+	}
+	
+	# Default route: proxy to Restate admin UI on port 9070
+	# This provides the web interface for monitoring and managing workflows
+	reverse_proxy host.docker.internal:9070
+	
+	# Custom error handling when Restate server is not running
+	handle_errors {
+		respond "Restate server is not running. Start infrastructure with: cd deployment/dev && ./start.sh" 503
+	}
+}

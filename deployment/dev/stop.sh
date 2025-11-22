@@ -103,10 +103,12 @@ if [ "$REMOVE_CONTAINERS" = true ]; then
     # Stop and remove containers (but keep volumes)
     docker-compose down
     log_success "Services stopped and containers removed (volumes preserved)"
+    log_success "Caddy proxy stopped"
 else
     # Just stop containers
     docker-compose stop
     log_success "Services stopped (containers and volumes preserved)"
+    log_success "Caddy proxy stopped"
 fi
 
 # =============================================================================
