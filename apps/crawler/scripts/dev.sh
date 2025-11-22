@@ -22,5 +22,5 @@ fi
 
 
 # Start the server
-echo -e "${GREEN}✓ Starting server on ${CRAWLER_HOST:-0.0.0.0}:${CRAWLER_PORT:-8002}${NC}"
-uv run uvicorn src.main:app --reload --port ${CRAWLER_PORT:-8002} --host ${CRAWLER_HOST:-0.0.0.0}
+echo -e "${GREEN}✓ Starting Restate Crawler Service on ${CRAWLER_SERVICE_HOST:-0.0.0.0}:${CRAWLER_SERVICE_PORT:-9081}${NC}"
+uv run python -m src.main

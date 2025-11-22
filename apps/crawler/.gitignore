@@ -1,34 +1,55 @@
-# dependencies (bun install)
-node_modules
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# output
-out
-dist
-*.tgz
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
 
-# code coverage
-coverage
-*.lcov
+# uv
+.uv/
+uv.lock
 
-# logs
-logs
-_.log
-report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.hypothesis/
 
-# dotenv environment variable files
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
 .env
-.env.development.local
-.env.test.local
-.env.production.local
 .env.local
 
-# caches
-.eslintcache
-.cache
-*.tsbuildinfo
+# Logs
+*.log
 
-# IntelliJ based IDEs
-.idea
-
-# Finder (MacOS) folder config
+# OS
 .DS_Store
+Thumbs.db
