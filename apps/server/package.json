@@ -25,6 +25,7 @@
     "@favy/shared": "workspace:*",
     "@favy/db": "workspace:*",
     "@favy/workflow": "workspace:*",
+    "@favy/auth": "workspace:*",
     "@orpc/client": "catalog:",
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",

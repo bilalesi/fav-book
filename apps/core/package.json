@@ -1,0 +1,29 @@
+{
+  "name": "@favy/core",
+  "version": "1.0.50",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "build": "bun build src/index.ts --outdir ./dist --target bun",
+    "start": "bun run src/index.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@elysiajs/cors": "^1.1.1",
+    "@elysiajs/openapi": "^1.1.4",
+    "@favy/auth": "workspace:*",
+    "@favy/shared": "workspace:*",
+    "@favy/db": "workspace:*",
+    "@prisma/adapter-pg": "catalog:",
+    "@prisma/client": "catalog:",
+    "elysia": "catalog:",
+    "neverthrow": "catalog:",
+    "radash": "^12.1.1",
+    "ts-pattern": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "bun-types": "latest",
+    "prisma": "catalog:"
+  },
+  "module": "src/index.js"
+}
