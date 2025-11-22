@@ -87,7 +87,7 @@ const bookmarkImportDataSchema = z.object({
         type: mediaTypeInputSchema,
         url: z.url("Invalid media URL"),
         thumbnailUrl: z.url("Invalid thumbnail URL").optional(),
-      }),
+      })
     )
     .optional(),
   timestamp: z.string().min(1, "Timestamp is required"),
@@ -104,12 +104,12 @@ async function spawn_enrichment_workflow(
   userId: string,
   platform: TPlatform,
   url: string,
-  content: string,
+  content: string
 ): Promise<string | null> {
   try {
     if (!has_enrichment_enabled()) {
       console.log(
-        `[Enrichment] Skipped for bookmark ${bookmarkId} - enrichment disabled`,
+        `[Enrichment] Skipped for bookmark ${bookmarkId} - enrichment disabled`
       );
       return null;
     }
@@ -135,7 +135,7 @@ async function spawn_enrichment_workflow(
   } catch (error) {
     console.error(
       `[Enrichment] Failed to spawn workflow for bookmark ${bookmarkId}:`,
-      error,
+      error
     );
     // Don't throw - enrichment failure shouldn't block bookmark creation
     return null;
@@ -147,8 +147,8 @@ export type GetBookmarkPost = PrismaType.Result<
   {
     include: {
       media: true;
-      collections: { include: { collection: true; }; };
-      categories: { include: { category: true; }; };
+      collections: { include: { collection: true } };
+      categories: { include: { category: true } };
       enrichment: true;
     };
   },
@@ -190,13 +190,13 @@ export const bookmarks_router = {
           metadata: input.metadata as Prisma.InputJsonValue,
           media: input.media
             ? {
-              create: input.media.map((m) => ({
-                type: m.type,
-                url: m.url,
-                thumbnailUrl: m.thumbnailUrl,
-                metadata: m.metadata as Prisma.InputJsonValue,
-              })),
-            }
+                create: input.media.map((m) => ({
+                  type: m.type,
+                  url: m.url,
+                  thumbnailUrl: m.thumbnailUrl,
+                  metadata: m.metadata as Prisma.InputJsonValue,
+                })),
+              }
             : undefined,
         },
         include: {
@@ -219,7 +219,7 @@ export const bookmarks_router = {
         userId,
         input.platform,
         input.postUrl,
-        input.content,
+        input.content
       );
 
       if (workflowId) {
@@ -240,7 +240,7 @@ export const bookmarks_router = {
       z.object({
         filters: bookmarkFiltersSchema.optional(),
         pagination: paginationSchema.optional(),
-      }),
+      })
     )
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
@@ -330,7 +330,7 @@ export const bookmarks_router = {
             AND to_tsvector('english', content || ' ' || "authorName") @@ to_tsquery('english', $2)
           `,
           userId,
-          searchTerms,
+          searchTerms
         );
 
         const matchingIds = searchResults.map((r) => r.id);
@@ -423,7 +423,7 @@ export const bookmarks_router = {
       z.object({
         id: z.string(),
         data: updateBookmarkSchema,
-      }),
+      })
     )
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
@@ -444,15 +444,15 @@ export const bookmarks_router = {
 
       if (input.data.collectionIds !== undefined) {
         const currentCollectionIds = existing.collections.map(
-          (c) => c.collectionId,
+          (c) => c.collectionId
         );
         const newCollectionIds = input.data.collectionIds;
 
         const collectionsToAdd = newCollectionIds.filter(
-          (id) => !currentCollectionIds.includes(id),
+          (id) => !currentCollectionIds.includes(id)
         );
         const collectionsToRemove = currentCollectionIds.filter(
-          (id) => !newCollectionIds.includes(id),
+          (id) => !newCollectionIds.includes(id)
         );
 
         if (collectionsToAdd.length > 0) {
@@ -541,7 +541,7 @@ export const bookmarks_router = {
         filters: bookmarkFiltersSchema.optional(),
         pagination: paginationSchema.optional(),
         sortBy: z.enum(["relevance", "date", "views"]).default("relevance"),
-      }),
+      })
     )
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
@@ -638,77 +638,84 @@ export const bookmarks_router = {
         WHERE bp."userId" = $2
           AND to_tsvector('english', bp.content || ' ' || bp."authorName") @@ to_tsquery('english', $1)
           ${filters.platform ? "AND bp.platform = $3" : ""}
-          ${filters.authorUsername
-          ? `AND bp."authorUsername" = $${filters.platform ? 4 : 3}`
-          : ""
-        }
-          ${filters.dateFrom
-          ? `AND bp."savedAt" >= $${filters.platform
-            ? filters.authorUsername
-              ? 5
-              : 4
-            : filters.authorUsername
-              ? 4
-              : 3
-          }`
-          : ""
-        }
-          ${filters.dateTo
-          ? `AND bp."savedAt" <= $${filters.platform
-            ? filters.authorUsername
-              ? filters.dateFrom
-                ? 6
-                : 5
-              : filters.dateFrom
-                ? 5
-                : 4
-            : filters.authorUsername
-              ? filters.dateFrom
-                ? 5
-                : 4
-              : filters.dateFrom
-                ? 4
-                : 3
-          }`
-          : ""
-        }
-        ORDER BY ${input.sortBy === "relevance"
-          ? "rank DESC"
-          : input.sortBy === "date"
+          ${
+            filters.authorUsername
+              ? `AND bp."authorUsername" = $${filters.platform ? 4 : 3}`
+              : ""
+          }
+          ${
+            filters.dateFrom
+              ? `AND bp."savedAt" >= $${
+                  filters.platform
+                    ? filters.authorUsername
+                      ? 5
+                      : 4
+                    : filters.authorUsername
+                    ? 4
+                    : 3
+                }`
+              : ""
+          }
+          ${
+            filters.dateTo
+              ? `AND bp."savedAt" <= $${
+                  filters.platform
+                    ? filters.authorUsername
+                      ? filters.dateFrom
+                        ? 6
+                        : 5
+                      : filters.dateFrom
+                      ? 5
+                      : 4
+                    : filters.authorUsername
+                    ? filters.dateFrom
+                      ? 5
+                      : 4
+                    : filters.dateFrom
+                    ? 4
+                    : 3
+                }`
+              : ""
+          }
+        ORDER BY ${
+          input.sortBy === "relevance"
+            ? "rank DESC"
+            : input.sortBy === "date"
             ? 'bp."savedAt" DESC'
             : 'bp."viewCount" DESC'
         }
-        LIMIT $${filters.platform
-          ? filters.authorUsername
+        LIMIT $${
+          filters.platform
+            ? filters.authorUsername
+              ? filters.dateFrom
+                ? filters.dateTo
+                  ? 7
+                  : 6
+                : filters.dateTo
+                ? 6
+                : 5
+              : filters.dateFrom
+              ? filters.dateTo
+                ? 6
+                : 5
+              : filters.dateTo
+              ? 5
+              : 4
+            : filters.authorUsername
             ? filters.dateFrom
               ? filters.dateTo
-                ? 7
-                : 6
-              : filters.dateTo
                 ? 6
                 : 5
+              : filters.dateTo
+              ? 5
+              : 4
             : filters.dateFrom
-              ? filters.dateTo
-                ? 6
-                : 5
-              : filters.dateTo
-                ? 5
-                : 4
-          : filters.authorUsername
-            ? filters.dateFrom
-              ? filters.dateTo
-                ? 6
-                : 5
-              : filters.dateTo
-                ? 5
-                : 4
-            : filters.dateFrom
-              ? filters.dateTo
-                ? 5
-                : 4
-              : filters.dateTo
-                ? 4
-                : 3
+            ? filters.dateTo
+              ? 5
+              : 4
+            : filters.dateTo
+            ? 4
+            : 3
         }
       `;
       const params: (string | Date | number)[] = [searchTerms, userId];
@@ -720,7 +727,7 @@ export const bookmarks_router = {
 
       const rawResults = await prisma.$queryRawUnsafe<any[]>(
         searchQuery,
-        ...params,
+        ...params
       );
       const bookmarkIds = rawResults.slice(0, limit).map((r) => r.id);
       const bookmarks = await prisma.bookmarkPost.findMany({
@@ -754,46 +761,51 @@ export const bookmarks_router = {
         WHERE bp."userId" = $2
           AND to_tsvector('english', bp.content || ' ' || bp."authorName") @@ to_tsquery('english', $1)
           ${filters.platform ? "AND bp.platform = $3" : ""}
-          ${filters.authorUsername
-          ? `AND bp."authorUsername" = $${filters.platform ? 4 : 3}`
-          : ""
-        }
-          ${filters.dateFrom
-          ? `AND bp."savedAt" >= $${filters.platform
-            ? filters.authorUsername
-              ? 5
-              : 4
-            : filters.authorUsername
-              ? 4
-              : 3
-          }`
-          : ""
-        }
-          ${filters.dateTo
-          ? `AND bp."savedAt" <= $${filters.platform
-            ? filters.authorUsername
-              ? filters.dateFrom
-                ? 6
-                : 5
-              : filters.dateFrom
-                ? 5
-                : 4
-            : filters.authorUsername
-              ? filters.dateFrom
-                ? 5
-                : 4
-              : filters.dateFrom
-                ? 4
-                : 3
-          }`
-          : ""
-        }
+          ${
+            filters.authorUsername
+              ? `AND bp."authorUsername" = $${filters.platform ? 4 : 3}`
+              : ""
+          }
+          ${
+            filters.dateFrom
+              ? `AND bp."savedAt" >= $${
+                  filters.platform
+                    ? filters.authorUsername
+                      ? 5
+                      : 4
+                    : filters.authorUsername
+                    ? 4
+                    : 3
+                }`
+              : ""
+          }
+          ${
+            filters.dateTo
+              ? `AND bp."savedAt" <= $${
+                  filters.platform
+                    ? filters.authorUsername
+                      ? filters.dateFrom
+                        ? 6
+                        : 5
+                      : filters.dateFrom
+                      ? 5
+                      : 4
+                    : filters.authorUsername
+                    ? filters.dateFrom
+                      ? 5
+                      : 4
+                    : filters.dateFrom
+                    ? 4
+                    : 3
+                }`
+              : ""
+          }
       `;
 
       const countParams = params.slice(0, -1); // Remove limit parameter
       const countResult = await prisma.$queryRawUnsafe<[{ count: bigint }]>(
         countQuery,
-        ...countParams,
+        ...countParams
       );
       const total = Number(countResult[0]?.count || 0);
       const hasMore = rawResults.length > limit;
@@ -848,7 +860,7 @@ export const bookmarks_router = {
             });
           }
         });
-      }),
+      })
     )
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
@@ -911,13 +923,13 @@ export const bookmarks_router = {
                 metadata: bookmark.metadata as Prisma.InputJsonValue,
                 media: bookmark.media
                   ? {
-                    create: bookmark.media.map((m) => ({
-                      type: m.type,
-                      url: m.url,
-                      thumbnailUrl: m.thumbnailUrl,
-                      metadata: undefined,
-                    })),
-                  }
+                      create: bookmark.media.map((m) => ({
+                        type: m.type,
+                        url: m.url,
+                        thumbnailUrl: m.thumbnailUrl,
+                        metadata: undefined,
+                      })),
+                    }
                   : undefined,
               },
             });
@@ -937,7 +949,7 @@ export const bookmarks_router = {
       });
       if (successfulBookmarks.size > 0) {
         console.log(
-          `[Bulk Import] Spawning enrichment workflows for ${successfulBookmarks.size} bookmarks`,
+          `[Bulk Import] Spawning enrichment workflows for ${successfulBookmarks.size} bookmarks`
         );
         Promise.all(
           Array.from(successfulBookmarks.entries()).map(
@@ -947,7 +959,7 @@ export const bookmarks_router = {
                 userId,
                 platform,
                 originalData.postUrl,
-                originalData.content,
+                originalData.content
               );
               if (workflowId) {
                 await prisma.bookmarkEnrichment
@@ -961,12 +973,12 @@ export const bookmarks_router = {
                   .catch((err) => {
                     console.error(
                       `[Bulk Import] Failed to create enrichment record for ${bookmarkId}:`,
-                      err,
+                      err
                     );
                   });
               }
-            },
-          ),
+            }
+          )
         ).catch((err) => {
           console.error("[Bulk Import] Error spawning workflows:", err);
         });
@@ -987,7 +999,7 @@ export const bookmarks_router = {
         description: z.string().optional(),
         collectionIds: z.array(z.string()).optional(),
         metadata: z.record(z.string(), z.any()).optional(),
-      }),
+      })
     )
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
@@ -998,7 +1010,7 @@ export const bookmarks_router = {
         const errorMessage =
           error instanceof Error ? error.message : "Invalid URL format";
         throw new Error(
-          `Unable to save bookmark: ${errorMessage}. Please check the URL and try again.`,
+          `Unable to save bookmark: ${errorMessage}. Please check the URL and try again.`
         );
       }
       const existingBookmark = await prisma.bookmarkPost.findFirst({
@@ -1024,7 +1036,7 @@ export const bookmarks_router = {
 
       if (existingBookmark) {
         throw new Error(
-          "This URL is already in your bookmarks. You can find it in your bookmarks list.",
+          "This URL is already in your bookmarks. You can find it in your bookmarks list."
         );
       }
 
@@ -1039,7 +1051,7 @@ export const bookmarks_router = {
 
         if (collections.length !== input.collectionIds.length) {
           throw new Error(
-            "One or more selected collections could not be found. Please refresh and try again.",
+            "One or more selected collections could not be found. Please refresh and try again."
           );
         }
       }
@@ -1067,7 +1079,7 @@ export const bookmarks_router = {
           metadataExtractionFailed = true;
           console.warn(
             `[Metadata Extraction] Failed for ${normalizedUrl}:`,
-            error instanceof Error ? error.message : "Unknown error",
+            error instanceof Error ? error.message : "Unknown error"
           );
           const urlObj = new URL(normalizedUrl);
           title = title || urlObj.hostname;
@@ -1102,10 +1114,10 @@ export const bookmarks_router = {
             metadata: extractedMetadata as Prisma.InputJsonValue,
             collections: input.collectionIds
               ? {
-                create: input.collectionIds.map((collectionId) => ({
-                  collectionId,
-                })),
-              }
+                  create: input.collectionIds.map((collectionId) => ({
+                    collectionId,
+                  })),
+                }
               : undefined,
           },
           include: {
@@ -1128,7 +1140,7 @@ export const bookmarks_router = {
           userId,
           DictPlatform.GENERIC_URL,
           normalizedUrl,
-          description || normalizedUrl,
+          description || normalizedUrl
         );
 
         if (workflowId) {
@@ -1154,7 +1166,7 @@ export const bookmarks_router = {
       } catch (error) {
         console.error(
           `[Bookmark Creation] Failed to create bookmark for ${normalizedUrl}:`,
-          error,
+          error
         );
 
         if (
@@ -1162,12 +1174,12 @@ export const bookmarks_router = {
           error.message.includes("Unique constraint")
         ) {
           throw new Error(
-            "This URL is already in your bookmarks. Please check your bookmarks list.",
+            "This URL is already in your bookmarks. Please check your bookmarks list."
           );
         }
 
         throw new Error(
-          "Failed to save bookmark. Please try again or contact support if the problem persists.",
+          "Failed to save bookmark. Please try again or contact support if the problem persists."
         );
       }
     }),
@@ -1176,7 +1188,7 @@ export const bookmarks_router = {
     .input(
       z.object({
         url: z.string().min(1, "URL is required"),
-      }),
+      })
     )
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
@@ -1216,7 +1228,7 @@ export const bookmarks_router = {
         bookmarkIds: z
           .array(z.string())
           .min(1, "At least one bookmark ID is required"),
-      }),
+      })
     )
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
@@ -1231,7 +1243,7 @@ export const bookmarks_router = {
 
       if (bookmarks.length !== bookmarkIds.length) {
         throw new Error(
-          "One or more bookmarks not found or do not belong to you",
+          "One or more bookmarks not found or do not belong to you"
         );
       }
 
@@ -1257,7 +1269,7 @@ export const bookmarks_router = {
         collectionIds: z
           .array(z.string())
           .min(1, "At least one collection ID is required"),
-      }),
+      })
     )
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
@@ -1274,7 +1286,7 @@ export const bookmarks_router = {
 
       if (bookmarks.length !== bookmarkIds.length) {
         throw new Error(
-          "One or more bookmarks not found or do not belong to you",
+          "One or more bookmarks not found or do not belong to you"
         );
       }
 
@@ -1289,7 +1301,7 @@ export const bookmarks_router = {
 
       if (collections.length !== collectionIds.length) {
         throw new Error(
-          "One or more collections not found or do not belong to you",
+          "One or more collections not found or do not belong to you"
         );
       }
 
@@ -1298,7 +1310,7 @@ export const bookmarks_router = {
         collectionIds.map((collectionId) => ({
           bookmarkPostId: bookmarkId,
           collectionId,
-        })),
+        }))
       );
 
       await prisma.bookmarkPostCollection.createMany({
@@ -1397,7 +1409,7 @@ export const bookmarks_router = {
         const status = bookmark.enrichment.processingStatus;
         if (status === "PROCESSING" || status === "PENDING") {
           throw new Error(
-            "Enrichment is already in progress. Please wait for it to complete.",
+            "Enrichment is already in progress. Please wait for it to complete."
           );
         }
       }
@@ -1408,16 +1420,15 @@ export const bookmarks_router = {
         userId,
         bookmark.platform,
         bookmark.postUrl,
-        bookmark.content,
+        bookmark.content
       );
 
       if (!workflowId) {
         throw new Error(
-          "Failed to start enrichment workflow. Enrichment may be disabled.",
+          "Failed to start enrichment workflow. Enrichment may be disabled."
         );
       }
 
-      // Update or create enrichment record
       if (bookmark.enrichment) {
         await prisma.bookmarkEnrichment.update({
           where: { id: bookmark.enrichment.id },
@@ -1454,7 +1465,7 @@ export const bookmarks_router = {
           .max(500, "Maximum 500 URLs allowed per batch"),
         collectionIds: z.array(z.string()).optional(),
         skipDuplicates: z.boolean().default(true),
-      }),
+      })
     )
     .handler(async ({ input, context }) => {
       const userId = context.session.user.id;
@@ -1476,8 +1487,9 @@ export const bookmarks_router = {
       // Allow up to 1000 URL imports per hour
       if (recentImports + urls.length > 1000) {
         throw new Error(
-          `Rate limit exceeded. You can import up to 1000 URLs per hour. You have ${1000 - recentImports
-          } imports remaining in this hour.`,
+          `Rate limit exceeded. You can import up to 1000 URLs per hour. You have ${
+            1000 - recentImports
+          } imports remaining in this hour.`
         );
       }
 
@@ -1492,7 +1504,7 @@ export const bookmarks_router = {
 
         if (collections.length !== collectionIds.length) {
           throw new Error(
-            "One or more selected collections could not be found. Please refresh and try again.",
+            "One or more selected collections could not be found. Please refresh and try again."
           );
         }
       }
@@ -1565,7 +1577,7 @@ export const bookmarks_router = {
             // Handle metadata extraction failures gracefully (Requirement 4.2, 4.5)
             console.warn(
               `[Batch Import] Metadata extraction failed for ${normalized}:`,
-              error instanceof Error ? error.message : "Unknown error",
+              error instanceof Error ? error.message : "Unknown error"
             );
             const urlObj = new URL(normalized);
             extractedMetadata = {
@@ -1601,10 +1613,10 @@ export const bookmarks_router = {
               // Associate with collections if specified (Requirement 3.3)
               collections: collectionIds
                 ? {
-                  create: collectionIds.map((collectionId) => ({
-                    collectionId,
-                  })),
-                }
+                    create: collectionIds.map((collectionId) => ({
+                      collectionId,
+                    })),
+                  }
                 : undefined,
             },
           });
@@ -1614,7 +1626,7 @@ export const bookmarks_router = {
           // Log errors for debugging (Requirement 1.5)
           console.error(
             `[Batch Import] Failed to import ${original}:`,
-            error instanceof Error ? error.message : "Unknown error",
+            error instanceof Error ? error.message : "Unknown error"
           );
 
           failureCount++;

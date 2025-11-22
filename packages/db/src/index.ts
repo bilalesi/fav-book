@@ -8,4 +8,5 @@ const prisma = new PrismaClient({ adapter });
 
 export default prisma;
 export { Prisma, prisma };
+export * as DB from "../prisma/generated/schemas";
 export * from "../prisma/generated/enums";

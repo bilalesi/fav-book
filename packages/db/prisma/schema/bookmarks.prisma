@@ -56,17 +56,18 @@ model BookmarkPost {
 }
 
 model BookmarkEnrichment {
-    id               String           @id @default(cuid())
-    bookmarkPostId   String           @unique
-    summary          String?          @db.Text
+    id               String                      @id @default(cuid())
+    bookmarkPostId   String                      @unique
+    summary          String?                     @db.Text
+    summaryVector    Unsupported("tsvector")?
     keywords         Json?
     tags             Json?
-    processingStatus ProcessingStatus @default(PENDING)
+    processingStatus ProcessingStatus            @default(PENDING)
     workflowId       String?
-    errorMessage     String?          @db.Text
+    errorMessage     String?                     @db.Text
     enrichedAt       DateTime?
-    createdAt        DateTime         @default(now())
-    updatedAt        DateTime         @updatedAt
+    createdAt        DateTime                    @default(now())
+    updatedAt        DateTime                    @updatedAt
 
     bookmarkPost BookmarkPost @relation(fields: [bookmarkPostId], references: [id], onDelete: Cascade)
 

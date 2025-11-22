@@ -1,3 +1,5 @@
+.kiro/
+*__pycache__*
 # Dependencies
 node_modules
 .pnp
