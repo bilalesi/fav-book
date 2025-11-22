@@ -1,0 +1,13 @@
+{
+  "pureModels": true,
+  "naming": {
+    "enum": {
+      "filePattern": "{Enum}Validator.schema.ts",
+      "exportNamePattern": "{enum}ValidatorSchema",
+      "typeSuffix": "EnumType"
+    },
+    "pureModel": {
+      "typeSuffix": "T"
+    }
+  }
+}
