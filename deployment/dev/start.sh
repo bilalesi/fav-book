@@ -327,13 +327,6 @@ else
 fi
 cd "$PROJECT_ROOT"
 
-# Stop the temporary worker
-log_info "Stopping temporary worker..."
-kill $WORKER_PID 2>/dev/null || true
-wait $WORKER_PID 2>/dev/null || true
-log_success "Temporary worker stopped"
-
-cd "$PROJECT_ROOT"
 
 # =============================================================================
 # Display Connection Information

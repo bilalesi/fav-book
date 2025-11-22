@@ -1,7 +1,8 @@
-import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import prisma from "@favy/db";
-import { sendMagicLinkEmail } from "./email-service";
+import { betterAuth } from "better-auth";
+import { prisma } from "@favy/db";
+
+import { send_magic_link_email } from "./email-service";
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -16,40 +17,34 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async ({ user, url }) => {
-      // Optional: implement password reset email
       console.log(`Password reset for ${user.email}: ${url}`);
     },
   },
 
-  // Social OAuth providers
   socialProviders: {
     twitter: {
       clientId: process.env.TWITTER_CLIENT_ID as string,
       clientSecret: process.env.TWITTER_CLIENT_SECRET as string,
       enabled: true,
     },
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID as string,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+      enabled: true,
+    }
   },
 
-  // Magic link authentication via email verification
   emailVerification: {
     sendVerificationEmail: async ({ user, url }) => {
-      console.info("========================================");
-      console.info("BETTER-AUTH: sendVerificationEmail CALLED");
-      console.info("========================================");
       console.info("User:", JSON.stringify(user, null, 2));
       console.info("URL:", url);
-      console.info("========================================");
 
-      const result = await sendMagicLinkEmail({
+      const result = await send_magic_link_email({
         to: user.email,
         magicLink: url,
       });
 
-      console.info("========================================");
-      console.info("BETTER-AUTH: Email send result");
-      console.info("========================================");
       console.info("Result:", JSON.stringify(result, null, 2));
-      console.info("========================================");
 
       if (!result.success) {
         throw new Error(`Failed to send magic link email: ${result.error}`);
@@ -59,7 +54,6 @@ export const auth = betterAuth({
     sendOnSignUp: true,
   },
 
-  // Session management with secure cookies
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // 1 day
@@ -69,7 +63,6 @@ export const auth = betterAuth({
     },
   },
 
-  // Advanced security settings
   advanced: {
     defaultCookieAttributes: {
       sameSite: "lax",
@@ -87,4 +80,4 @@ export const auth = betterAuth({
 });
 
 export type Auth = typeof auth;
-export { sendMagicLinkEmail } from "./email-service";
+export { send_magic_link_email as sendMagicLinkEmail } from "./email-service";

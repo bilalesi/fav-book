@@ -29,7 +29,7 @@ function RouteComponent() {
   const [isLoadingMagicLink, setIsLoadingMagicLink] = useState(false);
   const [showOtherOptions, setShowOtherOptions] = useState(false);
 
-  const handleOAuthLogin = async (provider: "twitter" | "linkedin") => {
+  const handleOAuthLogin = async (provider: "twitter" | "linkedin" | "google") => {
     setIsLoadingOAuth(provider);
     try {
       await authClient.signIn.social({
@@ -53,7 +53,6 @@ function RouteComponent() {
     }
 
     setIsLoadingMagicLink(true);
-    console.log("——", import.meta.env.VITE_SERVER_URL);
     try {
       const response = await fetch(
         `${import.meta.env.VITE_SERVER_URL}/api/auth/send-verification-email`,
@@ -87,7 +86,6 @@ function RouteComponent() {
 
   return (
     <div className="flex min-h-screen">
-      {/* Left side - Nature image */}
       <div className="hidden lg:block lg:w-1/2 relative overflow-hidden">
         <div
           className="absolute inset-0 bg-linear-to-br from-gray-400 via-gray-300 to-gray-200"
@@ -101,10 +99,8 @@ function RouteComponent() {
         </div>
       </div>
 
-      {/* Right side - Login form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
         <div className="w-full max-w-md space-y-8">
-          {/* Logo for mobile */}
           <div className="lg:hidden mb-8">
             <Bookmark className="h-8 w-8" />
           </div>
@@ -118,15 +114,14 @@ function RouteComponent() {
             </p>
           </div>
 
-          <div className="space-y-4">
-            {/* Google Button */}
+          <div className="space-y-4">            {/* Google Button */}
             <Button
               variant="outline"
-              className="w-full h-12 bg-foreground text-background hover:bg-foreground/90 border-0"
-              onClick={() => handleOAuthLogin("twitter")}
+              className="w-full h-12 bg-foreground text-white hover:bg-foreground/90 hover:text-white border-0"
+              onClick={() => handleOAuthLogin("google")}
               disabled={isLoadingOAuth !== null}
             >
-              {isLoadingOAuth === "twitter" ? (
+              {isLoadingOAuth === "google" ? (
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               ) : (
                 <svg
@@ -188,7 +183,6 @@ function RouteComponent() {
               </svg>
             </button>
 
-            {/* Expanded options */}
             {showOtherOptions && (
               <div className="space-y-3 pt-2">
                 <Button
@@ -211,7 +205,6 @@ function RouteComponent() {
                   Continue with X
                 </Button>
 
-                {/* Email input */}
                 <form onSubmit={handleMagicLinkSend} className="space-y-3">
                   <Input
                     type="email"

@@ -2,31 +2,30 @@ import { Resend } from "resend";
 import { render } from "@react-email/components";
 import MagicLinkEmail from "./emails/magic-link";
 
-// Lazy initialization - only create Resend instance when needed
-let resendInstance: Resend | null = null;
+let resend_instance: Resend | null = null;
 
-function getResendInstance(): Resend {
-  if (!resendInstance) {
+function get_resend_instance(): Resend {
+  if (!resend_instance) {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
       throw new Error(
         "RESEND_API_KEY environment variable is not set. Please add it to your .env file."
       );
     }
-    resendInstance = new Resend(apiKey);
+    resend_instance = new Resend(apiKey);
   }
-  return resendInstance;
+  return resend_instance;
 }
 
-export interface SendMagicLinkEmailParams {
+export interface ISendMagicLinkEmailParams {
   to: string;
   magicLink: string;
 }
 
-export async function sendMagicLinkEmail({
+export async function send_magic_link_email({
   to,
   magicLink,
-}: SendMagicLinkEmailParams): Promise<{ success: boolean; error?: string }> {
+}: ISendMagicLinkEmailParams): Promise<{ success: boolean; error?: string }> {
   console.log("\n" + "=".repeat(80));
   console.log("📧 SENDING MAGIC LINK EMAIL");
   console.log("=".repeat(80));
@@ -43,7 +42,7 @@ export async function sendMagicLinkEmail({
   );
 
   try {
-    const resend = getResendInstance();
+    const resend = get_resend_instance();
 
     console.log("\n� Rendenring email HTML...");
     const emailHtml = await render(
@@ -70,35 +69,22 @@ export async function sendMagicLinkEmail({
     });
 
     if (error) {
-      console.log("\n" + "=".repeat(80));
       console.log("❌ RESEND API RETURNED ERROR");
-      console.log("=".repeat(80));
       console.log("Error object:", JSON.stringify(error, null, 2));
-      console.log("=".repeat(80) + "\n");
       return { success: false, error: error.message };
     }
 
-    console.log("\n" + "=".repeat(80));
     console.log("✅ EMAIL SENT SUCCESSFULLY!");
-    console.log("=".repeat(80));
     console.log("📧 Email ID:", data?.id);
-    console.log("� CheCck Resend dashboard: https://resend.com/emails");
-    console.log(
-      "💡 Note: With onboarding@resend.dev, emails appear in dashboard only"
-    );
-    console.log("=".repeat(80) + "\n");
     return { success: true };
   } catch (error) {
-    console.log("\n" + "=".repeat(80));
     console.log("❌ EXCEPTION CAUGHT IN sendMagicLinkEmail");
-    console.log("=".repeat(80));
     console.log("Error type:", error?.constructor?.name);
     console.log("Error:", error);
     if (error instanceof Error) {
       console.log("Message:", error.message);
       console.log("Stack:", error.stack);
     }
-    console.log("=".repeat(80) + "\n");
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",

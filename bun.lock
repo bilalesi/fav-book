@@ -1,5 +1,6 @@
 {
   "lockfileVersion": 1,
+  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "my-better-t-app",
@@ -26,6 +27,9 @@
         "tsdown": "^0.15.5",
         "turbo": "^2.5.4",
       },
+    },
+    "apps/crawler": {
+      "name": "@favy/crawler",
     },
     "apps/extension": {
       "name": "@fav-book/extension",
@@ -642,6 +646,8 @@
     "@favy/ai": ["@favy/ai@workspace:packages/ai"],
 
     "@favy/auth": ["@favy/auth@workspace:packages/auth"],
+
+    "@favy/crawler": ["@favy/crawler@workspace:apps/crawler"],
 
     "@favy/db": ["@favy/db@workspace:packages/db"],
 

@@ -3,7 +3,7 @@ import { join } from "path";
 
 const logFile = join(process.cwd(), "auth-debug.log");
 
-export function fileLog(...args: any[]) {
+export function file_log(...args: any[]) {
   const timestamp = new Date().toISOString();
   const message = args
     .map((arg) =>
