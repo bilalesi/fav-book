@@ -1417,7 +1417,6 @@ export const bookmarks_router = {
         );
       }
 
-      // Update or create enrichment record
       if (bookmark.enrichment) {
         await prisma.bookmarkEnrichment.update({
           where: { id: bookmark.enrichment.id },
